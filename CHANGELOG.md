@@ -7,6 +7,24 @@ Versioning: [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.4.0] — 2026-06-27
+
+### Added
+- **Activation-key gate**: excavation behavior (extra block breaking) only fires when the configured `activationKey` (default: Grave/tilde, LWJGL key 41) is held at the moment the player's block break is detected. Without the key the mod reports detection and BFS count only — no world modifications.
+- `ExcavationDetector.WorldWriter` — minimal single-method interface (`setBlock`) that lets block-removal logic call into the obfuscated world without touching `xd` types directly. Implemented in `ExcavationHandler` using confirmed `xd.g(int,int,int,int)`.
+- `ExcavationDetector.bfsFirstConnectedBlock` — returns the coordinates of the first BFS-reachable connected block (or `null`), used to select the one extra block to break.
+- `ExcavationDetector.removeBlock(WorldWriter, x, y, z)` — thin wrapper that calls `writer.setBlock(x, y, z, 0)`, isolating world modification from BFS logic.
+- `ExcavationDetector.seedQueue` extracted as a private helper to eliminate duplication between `bfsConnectedBlocks` and `bfsFirstConnectedBlock`.
+- `ExcavationHandler` now calls `xd.g(x,y,z,0)` (confirmed as `World.setBlockWithNotify`) to remove the chosen block, triggering proper chunk dirty-marking and neighbor block-update notifications.
+- New chat messages when key is held: `[RorysExcavation] Excavated 1 extra block id=<id> meta=<meta> pos=(x,y,z)`.
+- Confirmed obfuscated mapping `xd.g(int,int,int,int)` = `setBlockWithNotify` documented in Core `docs/OBFUSCATION_MAP.md` (verified by `javap -c` bytecode inspection).
+
+### Not yet implemented
+- Breaking more than one extra block (full vein excavation planned for a future release).
+- Tool damage, drops, blacklist.
+
+---
+
 ## [0.3.0] — 2026-06-27
 
 ### Added

@@ -6,6 +6,12 @@ This roadmap describes planned directions for Rory's Excavation. Nothing here is
 
 ## Released
 
+### v0.4.0
+- Activation-key gate: excavation only fires while the configured `activationKey` is held.
+- Breaks exactly one extra connected matching block (first BFS result) when the key is held.
+- `ExcavationDetector.WorldWriter` isolates world-modification calls from BFS logic.
+- `xd.g(int,int,int,int)` confirmed as `setBlockWithNotify`; documented in Core obfuscation map.
+
 ### v0.3.0
 - BFS connected-block search: after each detected break, runs a BFS from the 6 neighbors of the broken block, matching by block ID and metadata, capped at `maxBlocks` (default 64).
 - `ExcavationDetector.WorldReader` interface isolates BFS logic from obfuscated MC types.

@@ -59,6 +59,7 @@ When `pl.g != null`, the target is an entity and `b/c/d` should not be used.
 | `getBlockId(x, y, z)` | `a(int, int, int)` | `javap` confirms delegation to `ack.a:(III)I` |
 | `getBlockMetadata(x, y, z)` | `e(int, int, int)` | `javap` confirms delegation to `ack.c:(III)I` |
 | `getBlockLightValue(x, y, z)` | `d(int, int, int)` | Delegates to `ack.b:(III)I`; returns combined sky+block light 0–255. **Not metadata.** |
+| `setBlockWithNotify(x, y, z, blockId)` | `g(int, int, int, int)` | Writes block via `d(IIII)Z` (→ `ack.a:(IIII)Z` + marks dirty), then notifies neighbors via `h(IIII)V` (→ `k(III)V` + `j(IIII)V`). Returns `boolean`. Pass `blockId=0` to remove a block. Confirmed by `javap -c` during v0.4.0 development. |
 
 ### `vq` (EntityClientPlayerMP) / `yw` (EntityPlayer) methods
 
@@ -129,13 +130,13 @@ mkdir build\classes
 
 ```bat
 cd build\classes
-jar cf ..\..\rorys-excavation-0.3.0.jar .
+jar cf ..\..\rorys-excavation-0.4.0.jar .
 ```
 
 ### Step 3 — Verify
 
 ```bat
-jar -tf rorys-excavation-0.3.0.jar
+jar -tf rorys-excavation-0.4.0.jar
 ```
 
 Expected contents:

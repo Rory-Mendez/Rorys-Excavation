@@ -2,7 +2,7 @@
 
 A lightweight Minecraft 1.2.5 quality-of-life mod inspired by FTB Ultimine / VeinMiner behavior.
 
-**Latest version:** v0.3.0  
+**Latest version:** v0.4.0  
 **Target:** Minecraft 1.2.5 · Forge 3.4.9.171 · FML 2.2.106.176
 
 ---
@@ -19,7 +19,7 @@ Part of the **Rory's Mods** ecosystem.
 
 When the player holds an activation key and breaks a block, Rory's Excavation finds all connected blocks of the same type and breaks up to a configurable maximum in one action — no more mining one ore at a time.
 
-**v0.3.0** adds BFS connected-block search: after detecting a break the mod runs a breadth-first search from the broken block's neighbors, following face-adjacent blocks that share the same block ID and metadata, up to the configured `maxBlocks` limit (default 64). The total count is reported in chat. No blocks are broken yet — this release is debug-only.
+**v0.4.0** adds activation-key-gated excavation: hold the configured key (default: Grave/tilde `` ` ``) while breaking a block to trigger excavation. The mod runs BFS over connected matching blocks and breaks exactly one extra block — the nearest connected match. Without the key, only detection and BFS count are reported (no world changes). Full vein breaking ships in a future release.
 
 ---
 

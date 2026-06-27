@@ -8,16 +8,20 @@ import com.rorysmod.excavation.feature.ExcavationDetector;
 import cpw.mods.fml.client.FMLClientHandler;
 import cpw.mods.fml.common.ITickHandler;
 import cpw.mods.fml.common.TickType;
+import org.lwjgl.input.Keyboard;
 
 import java.util.EnumSet;
 
 /**
- * GAME-tick handler for block-break detection and BFS connected-block search.
+ * GAME-tick handler for block-break detection, BFS search, and single-block excavation.
  *
  * Polls {@code Minecraft.objectMouseOver} (runtime field: {@code mc.z}, type {@code pl})
- * each tick. Tracks the block ID at the targeted position. When it transitions from
- * non-air to air, runs a BFS to count all connected matching blocks and reports
- * the result in chat. No blocks are broken; this release is debug-only.
+ * each tick. When a tracked block transitions to air:
+ * <ol>
+ *   <li>Always: runs BFS to count connected matching blocks and reports the count.</li>
+ *   <li>Only when the configured activation key is held: breaks exactly one extra
+ *       connected block (the first BFS result) via {@code World.setBlockWithNotify}.</li>
+ * </ol>
  *
  * <h3>Obfuscated runtime names used (Minecraft 1.2.5 / Forge 3.4.9.171):</h3>
  * <pre>
@@ -28,8 +32,10 @@ import java.util.EnumSet;
  *   aiy.a(String)                     → printChatMessage   (confirmed: adds nt to chat List)
  *   pl.g                              → entityHit          (nn)  — null when targeting a block
  *   pl.b / pl.c / pl.d               → blockX / blockY / blockZ
- *   xd.a(int,int,int)                → getBlockId          (confirmed: delegates to ack.a)
- *   xd.e(int,int,int)                → getBlockMetadata    (confirmed: delegates to ack.c)
+ *   xd.a(int,int,int)                → getBlockId          (confirmed: delegates to ack.a:(III)I)
+ *   xd.e(int,int,int)                → getBlockMetadata    (confirmed: delegates to ack.c:(III)I)
+ *   xd.g(int,int,int,int)            → setBlockWithNotify  (confirmed: calls d(IIII)Z then h(IIII)V
+ *                                       which issues k(III)V + j(IIII)V neighbor notifications)
  * </pre>
  */
 public class ExcavationHandler implements ITickHandler {
@@ -76,11 +82,11 @@ public class ExcavationHandler implements ITickHandler {
                         + " pos=(" + prevX + "," + prevY + "," + prevZ + ")");
             }
 
-            // ── BFS connected-block search ────────────────────────────────────────
-            // Capture the world reference before the anonymous class so the
-            // compiler treats it as effectively final.
+            // Capture world reference for use in anonymous inner classes.
             // xd.a = getBlockId, xd.e = getBlockMetadata (both confirmed).
+            // xd.g = setBlockWithNotify (confirmed: writes block then notifies neighbors).
             final xd theWorld = mc.f;
+
             ExcavationDetector.WorldReader reader = new ExcavationDetector.WorldReader() {
                 @Override
                 public int getBlockId(int x, int y, int z) {
@@ -92,6 +98,7 @@ public class ExcavationHandler implements ITickHandler {
                 }
             };
 
+            // ── Always: BFS count for debug reporting ─────────────────────────
             int connected = ExcavationDetector.bfsConnectedBlocks(
                     reader, prevBlockId, prevMeta, prevX, prevY, prevZ,
                     config.getMaxBlocks());
@@ -100,6 +107,37 @@ public class ExcavationHandler implements ITickHandler {
                 mc.w.a("[RorysExcavation] Found " + connected
                         + " connected blocks for id=" + prevBlockId
                         + " meta=" + prevMeta);
+            }
+
+            // ── Activation key gate ───────────────────────────────────────────
+            // Keyboard.isKeyDown(int) is the confirmed LWJGL 2.x API for this version.
+            // Key code comes from config (default: Keyboard.KEY_GRAVE = 41).
+            boolean keyHeld = Keyboard.isKeyDown(config.getActivationKeyCode());
+
+            if (keyHeld && connected > 0) {
+                // Find and break exactly one extra connected matching block.
+                int[] target = ExcavationDetector.bfsFirstConnectedBlock(
+                        reader, prevBlockId, prevMeta, prevX, prevY, prevZ);
+
+                if (target != null) {
+                    ExcavationDetector.WorldWriter writer = new ExcavationDetector.WorldWriter() {
+                        @Override
+                        public void setBlock(int x, int y, int z, int blockId) {
+                            // xd.g(x,y,z,blockId) = World.setBlockWithNotify (confirmed).
+                            // Returns boolean (ignored — we don't need the dirty flag here).
+                            theWorld.g(x, y, z, blockId);
+                        }
+                    };
+
+                    ExcavationDetector.removeBlock(writer, target[0], target[1], target[2]);
+
+                    if (mc.w != null) {
+                        mc.w.a("[RorysExcavation] Excavated 1 extra block"
+                                + " id=" + prevBlockId
+                                + " meta=" + prevMeta
+                                + " pos=(" + target[0] + "," + target[1] + "," + target[2] + ")");
+                    }
+                }
             }
 
             clearPrev();
