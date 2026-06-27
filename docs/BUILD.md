@@ -28,15 +28,43 @@ All mappings confirmed by `javap` on `minecraft-1.2.5-client.jar` and `forge-1.2
 | `theWorld` | `f` | `xd` (World) |
 | `currentScreen` | `s` | `vp` (GuiScreen) |
 | `gameSettings` | `A` | `hu` (GameSettings) |
+| `objectMouseOver` | `z` | `pl` (MovingObjectPosition) |
+| `ingameGUI` | `w` | `aiy` (GuiIngame) |
+
+### `aiy` (GuiIngame) methods
+
+| MCP name | Runtime method | Confirmed by |
+|---|---|---|
+| `printChatMessage(String)` | `a(String)` | bytecode: wraps string in `nt`, adds to chat `List` |
+
+`aiy.b(String)` = `setRecordPlayingMessage` ("Now playing: …"). `aiy.c(String)` = translated chat (calls `a` internally). Use `a(String)` for plain messages.
+
+### `pl` (MovingObjectPosition) fields
+
+| MCP name | Runtime field | Type | Notes |
+|---|---|---|---|
+| `blockX` | `b` | `int` | Valid when `entityHit == null` |
+| `blockY` | `c` | `int` | Valid when `entityHit == null` |
+| `blockZ` | `d` | `int` | Valid when `entityHit == null` |
+| `entityHit` | `g` | `nn` | `null` when targeting a block; non-null when targeting an entity |
+
+When `objectMouseOver` itself is `null`, the player is targeting nothing (MISS).  
+When `pl.g == null`, the target is a block and `b/c/d` are valid coordinates.  
+When `pl.g != null`, the target is an entity and `b/c/d` should not be used.
+
+### `xd` (World) methods
+
+| MCP name | Runtime method | Confirmed by |
+|---|---|---|
+| `getBlockId(x, y, z)` | `a(int, int, int)` | `javap` confirms delegation to `ack.a:(III)I` |
+| `getBlockMetadata(x, y, z)` | `e(int, int, int)` | `javap` confirms delegation to `ack.c:(III)I` |
+| `getBlockLightValue(x, y, z)` | `d(int, int, int)` | Delegates to `ack.b:(III)I`; returns combined sky+block light 0–255. **Not metadata.** |
 
 ### `vq` (EntityClientPlayerMP) / `yw` (EntityPlayer) methods
 
 | MCP name | Runtime method |
 |---|---|
 | `isSneaking()` | `V()` |
-
-> **Note:** Additional obfuscated mappings for block access, world interaction, and item stack methods will be  
-> added here as they are confirmed for the excavation feature (v0.1.0).
 
 ---
 
@@ -92,7 +120,9 @@ mkdir build\classes
   -sourcepath src\main\java ^
   -d %MOD_OUT% ^
   src\main\java\mod_RorysExcavation.java ^
-  src\main\java\com\rorysmod\excavation\config\ModConfig.java
+  src\main\java\ExcavationHandler.java ^
+  src\main\java\com\rorysmod\excavation\config\ModConfig.java ^
+  src\main\java\com\rorysmod\excavation\feature\ExcavationDetector.java
 ```
 
 ### Step 2 — Package
@@ -113,7 +143,9 @@ Expected contents:
 ```
 META-INF/MANIFEST.MF
 mod_RorysExcavation.class
+ExcavationHandler.class
 com/rorysmod/excavation/config/ModConfig.class
+com/rorysmod/excavation/feature/ExcavationDetector.class
 ```
 
 ### Step 4 — Install

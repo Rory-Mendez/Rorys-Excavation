@@ -6,6 +6,11 @@ This roadmap describes planned directions for Rory's Excavation. Nothing here is
 
 ## Released
 
+### v0.1.0
+- Block-break detection: when the block at the player's crosshair disappears, the block ID, metadata, and world coordinates are logged to the Minecraft console.
+- Confirmed and documented runtime obfuscated API mappings for `World.getBlockId`, `World.getBlockMetadata`, and `MovingObjectPosition`.
+- Detection is gated by the `enableExcavation` config flag.
+
 ### v0.0.1
 - Project scaffold: source layout, documentation, build workflow.
 - Mod loads and appears in the Forge/FML mod list.
@@ -15,7 +20,7 @@ This roadmap describes planned directions for Rory's Excavation. Nothing here is
 
 ## Planned
 
-### v0.1.0 — Core Excavation
+### vNext — Core Excavation
 - Activation key detection (hold key + break block).
 - BFS traversal of connected same-type blocks.
 - Configurable `maxBlocks` limit (default 64).
@@ -23,7 +28,7 @@ This roadmap describes planned directions for Rory's Excavation. Nothing here is
 - Drops handled as close to vanilla behavior as possible.
 - Block blacklist support.
 
-### v0.2.0 — Polish
+### Polish
 - In-game feedback: particle or sound cue when excavation triggers.
 - Better blacklist: config-driven list of block IDs to never excavate.
 - Per-tool opt-in: only excavate when holding a pickaxe / shovel / axe (configurable).

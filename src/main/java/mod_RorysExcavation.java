@@ -2,6 +2,7 @@
 // discovers it. ModLoader scans for classes named mod_* in the default package.
 
 import com.rorysmod.excavation.config.ModConfig;
+import cpw.mods.fml.common.FMLCommonHandler;
 import cpw.mods.fml.common.Loader;
 
 import java.io.File;
@@ -18,7 +19,7 @@ import java.io.File;
 public class mod_RorysExcavation extends BaseMod {
 
     public static final String MOD_NAME = "Rory's Excavation";
-    public static final String VERSION  = "0.0.1";
+    public static final String VERSION  = "0.1.0";
 
     @Override
     public String getVersion() {
@@ -27,12 +28,14 @@ public class mod_RorysExcavation extends BaseMod {
 
     /**
      * Called by ModLoader after all mod classes are instantiated.
-     * Loads config. No tick handler is registered until excavation is implemented.
+     * Loads config and registers the excavation tick handler with FML.
      */
     @Override
     public void load() {
         File configDir = Loader.instance().getConfigDir();
         ModConfig config = new ModConfig(new File(configDir, "rorys-excavation.cfg"));
         config.load();
+
+        FMLCommonHandler.instance().registerTickHandler(new ExcavationHandler(config));
     }
 }
