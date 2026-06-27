@@ -2,7 +2,7 @@
 
 A lightweight Minecraft 1.2.5 quality-of-life mod inspired by FTB Ultimine / VeinMiner behavior.
 
-**Latest version:** v0.1.0  
+**Latest version:** v0.2.0  
 **Target:** Minecraft 1.2.5 · Forge 3.4.9.171 · FML 2.2.106.176
 
 ---
@@ -19,7 +19,7 @@ Part of the **Rory's Mods** ecosystem.
 
 When the player holds an activation key and breaks a block, Rory's Excavation finds all connected blocks of the same type and breaks up to a configurable maximum in one action — no more mining one ore at a time.
 
-**v0.1.0** adds block-break detection: when a block disappears from the player's crosshair the mod logs the block ID, metadata, and coordinates to the Minecraft console. No gameplay changes yet — full vein excavation ships in a future release.
+**v0.2.0** extends break detection with a neighbor scan: after detecting a break the mod inspects all 6 face-adjacent blocks, counts how many share the same block ID and metadata, and reports the result in chat. No gameplay changes yet — actual vein breaking ships in a future release.
 
 ---
 

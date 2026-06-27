@@ -7,6 +7,18 @@ Versioning: [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.2.0] — 2026-06-27
+
+### Added
+- `ExcavationDetector.countMatchingNeighbors` — pure logic method that counts how many of the 6 face-adjacent blocks share the same block ID and metadata as the broken block.
+- `ExcavationHandler` now reads the 6 orthogonal neighbor positions (+X, -X, +Y, -Y, +Z, -Z) after each detected break using the confirmed `xd.a` / `xd.e` world methods.
+- New in-game chat message after each break: `[RorysExcavation] Found <n> matching neighbors for id=<id> meta=<meta>`.
+
+### Not yet implemented
+- BFS traversal or actual block breaking (planned for a future release).
+
+---
+
 ## [0.1.0] — 2026-06-27
 
 ### Added

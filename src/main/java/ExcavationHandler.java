@@ -75,6 +75,33 @@ public class ExcavationHandler implements ITickHandler {
                         + " meta=" + prevMeta
                         + " pos=(" + prevX + "," + prevY + "," + prevZ + ")");
             }
+
+            // ── Neighbor scan ─────────────────────────────────────────────────
+            // Read block ID and metadata at the 6 orthogonal face-adjacent positions.
+            // +X, -X, +Y, -Y, +Z, -Z — order matches the arrays passed to the feature class.
+            // xd.a = getBlockId, xd.e = getBlockMetadata (both confirmed).
+            int[] nIds  = new int[6];
+            int[] nMeta = new int[6];
+            int[] offX  = { 1, -1,  0,  0,  0,  0 };
+            int[] offY  = { 0,  0,  1, -1,  0,  0 };
+            int[] offZ  = { 0,  0,  0,  0,  1, -1 };
+            for (int i = 0; i < 6; i++) {
+                int nx = prevX + offX[i];
+                int ny = prevY + offY[i];
+                int nz = prevZ + offZ[i];
+                nIds[i]  = mc.f.a(nx, ny, nz);
+                nMeta[i] = mc.f.e(nx, ny, nz);
+            }
+
+            int matchCount = ExcavationDetector.countMatchingNeighbors(
+                    prevBlockId, prevMeta, nIds, nMeta);
+
+            if (mc.w != null) {
+                mc.w.a("[RorysExcavation] Found " + matchCount
+                        + " matching neighbors for id=" + prevBlockId
+                        + " meta=" + prevMeta);
+            }
+
             clearPrev();
         }
 

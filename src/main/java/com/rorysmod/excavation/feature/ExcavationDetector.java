@@ -3,13 +3,13 @@ package com.rorysmod.excavation.feature;
 import java.util.logging.Logger;
 
 /**
- * Pure block-break detection logic.
+ * Pure block-break detection and neighbor-scan logic.
  *
  * No Forge coupling, no LWJGL, no obfuscated Minecraft types.
- * All inputs are plain Java primitives or standard types.
+ * All inputs are plain Java primitives or standard-library types.
  *
- * Called by ExcavationHandler when it detects a block transitioning
- * from non-air to air at the player's aim position.
+ * ExcavationHandler feeds this class raw int data extracted from the
+ * obfuscated Minecraft runtime so this class can focus on logic only.
  */
 public final class ExcavationDetector {
 
@@ -32,5 +32,31 @@ public final class ExcavationDetector {
                 + " id=" + blockId
                 + " meta=" + meta
                 + " pos=(" + x + "," + y + "," + z + ")");
+    }
+
+    /**
+     * Counts how many of the six orthogonal neighbors share the same block ID
+     * and metadata as the broken block.
+     *
+     * <p>Both arrays must have exactly 6 elements, in the order the caller
+     * chose (convention: +X, -X, +Y, -Y, +Z, -Z). Air neighbors (id == 0)
+     * will never match since the broken block ID is always non-zero.</p>
+     *
+     * @param brokenId    Block ID of the block that was broken.
+     * @param brokenMeta  Metadata of the block that was broken.
+     * @param neighborIds Block IDs for the six orthogonal neighbors.
+     * @param neighborMetas Block metadata for the six orthogonal neighbors.
+     * @return Number of neighbors with matching ID and metadata (0–6).
+     */
+    public static int countMatchingNeighbors(
+            int brokenId, int brokenMeta,
+            int[] neighborIds, int[] neighborMetas) {
+        int count = 0;
+        for (int i = 0; i < neighborIds.length; i++) {
+            if (neighborIds[i] == brokenId && neighborMetas[i] == brokenMeta) {
+                count++;
+            }
+        }
+        return count;
     }
 }
