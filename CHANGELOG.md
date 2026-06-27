@@ -7,25 +7,48 @@ Versioning: [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.6.0] — 2026-06-27
+
+### Added - v0.6.0
+
+- **Block drops for excavated blocks**: extra blocks now drop their items. The game's own `Block.dropBlockAsItemWithChance` (`pb.a(xd,int,int,int,int,float,int)` — confirmed by `javap`) is called for every extra block before it is removed. Drop chance is 1.0 (100%) and fortune is 0.
+- **Tightly clustered drops**: all item drops are repositioned to the center of the original broken block (`prevX+0.5, prevY+0.5, prevZ+0.5`) with zero velocity after spawning, so every item lands in one spot instead of scattering.
+- **Silent harvesting**: extra blocks are removed without triggering block-break sound or particles. Only the vanilla feedback from the player's own break is heard.
+- Confirmed and documented new obfuscated mappings from `javap` inspection: `pb` = Block class, `pb.m` = Block.blocksList (static `pb[]`, size 4096), `pb.a(xd,int,int,int,int,float,int)` = `dropBlockAsItemWithChance`, `xd.F` = `isRemote` (always `false` for `mc.f` in SSP), `xd.b` = loadedEntityList, `nn.d(DDD)` = setPosition, `nn.r/s/t` = motionX/Y/Z. See Core `docs/OBFUSCATION_MAP.md` and `docs/BUILD.md`.
+
+### How drops work - v0.6.0
+
+`pb.m[blockId]` is the Block instance for the excavated block type. `dropBlockAsItemWithChance` calls `idDropped` and `quantityDropped` on the block (preserving modded drop tables), then spawns an `EntityItem` (`fq`) via `xd.a(nn)` = `spawnEntityInWorld`, which adds it to `xd.b` (loadedEntityList). The vanilla spawner applies a random `[+0.15, +0.85]` position offset and sets `motionY = 0.2` (upward kick) plus random X/Z velocity — the cause of scatter. After each drop call, this mod snapshots how many entities were in `xd.b` before the call, then iterates new entries: each `fq` is repositioned via `nn.d(cx, cy, cz)` = setPosition and its `r/s/t` (motionX/Y/Z) fields are zeroed.
+
+### Not yet implemented - v0.6.0
+
+- Tool damage, blacklist.
+
+---
+
 ## [0.5.0] — 2026-06-27
 
-### Added
+### Added - v0.5.0
+
 - **Full vein excavation**: when the activation key is held, BFS now collects all connected matching blocks (up to `maxBlocks`, default 64) and removes every one of them via `World.setBlockWithNotify`. Previously only one extra block was broken.
 - `ExcavationDetector.bfsCollectBlocks` — BFS variant that returns `List<int[]>` of all matching connected positions (capped at `maxBlocks`). Used by the excavation path so the caller can iterate and break each block.
 - `ExcavationHandler` now branches on key state: key held → `bfsCollectBlocks` + remove loop; key not held → `bfsConnectedBlocks` count only (no allocation, no world change).
 - Chat message when key held: `[RorysExcavation] Excavated <count> extra blocks for id=<id> meta=<meta>`.
 
-### Removed
+### Removed - v0.5.0
+
 - `ExcavationDetector.bfsFirstConnectedBlock` — superseded by `bfsCollectBlocks`. The v0.4.0 single-block path is replaced by the full-vein loop.
 
-### Not yet implemented
+### Not yet implemented - v0.5.0
+
 - Tool damage, drops, blacklist.
 
 ---
 
 ## [0.4.0] — 2026-06-27
 
-### Added
+### Added - v0.4.0
+
 - **Activation-key gate**: excavation behavior (extra block breaking) only fires when the configured `activationKey` (default: Grave/tilde, LWJGL key 41) is held at the moment the player's block break is detected. Without the key the mod reports detection and BFS count only — no world modifications.
 - `ExcavationDetector.WorldWriter` — minimal single-method interface (`setBlock`) that lets block-removal logic call into the obfuscated world without touching `xd` types directly. Implemented in `ExcavationHandler` using confirmed `xd.g(int,int,int,int)`.
 - `ExcavationDetector.bfsFirstConnectedBlock` — returns the coordinates of the first BFS-reachable connected block (or `null`), used to select the one extra block to break.
@@ -35,7 +58,8 @@ Versioning: [Semantic Versioning](https://semver.org/).
 - New chat messages when key is held: `[RorysExcavation] Excavated 1 extra block id=<id> meta=<meta> pos=(x,y,z)`.
 - Confirmed obfuscated mapping `xd.g(int,int,int,int)` = `setBlockWithNotify` documented in Core `docs/OBFUSCATION_MAP.md` (verified by `javap -c` bytecode inspection).
 
-### Not yet implemented
+### Not yet implemented - v0.4.0
+
 - Breaking more than one extra block (full vein excavation planned for a future release).
 - Tool damage, drops, blacklist.
 
@@ -43,13 +67,15 @@ Versioning: [Semantic Versioning](https://semver.org/).
 
 ## [0.3.0] — 2026-06-27
 
-### Added
+### Added - v0.3.0
+
 - `ExcavationDetector.WorldReader` — minimal two-method interface (`getBlockId`, `getBlockMeta`) that lets BFS logic query the world without touching obfuscated Minecraft types.
 - `ExcavationDetector.bfsConnectedBlocks` — BFS traversal (not recursive DFS) that starts from the 6 immediate neighbors of the broken block, expands face-adjacently, matches by block ID and metadata, and caps at `maxBlocks` (default 64). Uses `HashSet<Long>` for visited tracking via a packed-long position key.
 - `ExcavationHandler` now creates an anonymous `WorldReader` that delegates to the confirmed `xd.a` / `xd.e` world methods and passes it to BFS after each detected break.
 - New in-game chat message after each break: `[RorysExcavation] Found <count> connected blocks for id=<id> meta=<meta>`.
 
-### Not yet implemented
+### Not yet implemented - v0.3.0
+
 - No blocks are broken (debug-only release).
 - No tool damage, no drops, no blacklist.
 
@@ -57,37 +83,43 @@ Versioning: [Semantic Versioning](https://semver.org/).
 
 ## [0.2.0] — 2026-06-27
 
-### Added
+### Added - v0.2.0
+
 - `ExcavationDetector.countMatchingNeighbors` — pure logic method that counts how many of the 6 face-adjacent blocks share the same block ID and metadata as the broken block.
 - `ExcavationHandler` now reads the 6 orthogonal neighbor positions (+X, -X, +Y, -Y, +Z, -Z) after each detected break using the confirmed `xd.a` / `xd.e` world methods.
 - New in-game chat message after each break: `[RorysExcavation] Found <n> matching neighbors for id=<id> meta=<meta>`.
 
-### Not yet implemented
+### Not yet implemented - v0.2.0
+
 - BFS traversal or actual block breaking (planned for a future release).
 
 ---
 
 ## [0.1.0] — 2026-06-27
 
-### Added
+### Added - v0.1.0
+
 - `ExcavationHandler` — GAME-tick handler that polls `Minecraft.objectMouseOver` (runtime: `mc.z`) to detect when a targeted block disappears.
 - `ExcavationDetector` — pure feature class (no Forge/LWJGL coupling) that logs detected breaks to the Minecraft console: block ID, metadata, and world coordinates.
 - `ExcavationHandler` also sends an in-game chat message on each detected break via `GuiIngame.printChatMessage` (runtime: `mc.w.a(String)`), making detection immediately visible without needing an external log viewer.
 - Block-break detection is gated by the `enableExcavation` config flag.
 - Confirmed and documented runtime obfuscated mappings for `World.getBlockId` (`xd.a`), `World.getBlockMetadata` (`xd.d`), `MovingObjectPosition` (`pl`), `GuiIngame` (`aiy`), and `GuiIngame.printChatMessage` (`aiy.a`).
 
-### Not yet implemented
+### Not yet implemented - v0.1.0
+
 - BFS traversal or multi-block breaking (planned for a future release).
 
 ---
 
 ## [0.0.1] — 2026-06-27
 
-### Added
+### Added - v0.0.1
+
 - Project scaffold: source layout, build instructions, documentation.
 - `mod_RorysExcavation` entry point — mod loads and appears in the Forge/FML mod list.
 - Config file created on first launch at `.minecraft/config/rorys-excavation.cfg`.
 - Config properties defined: `enableExcavation`, `activationKey`, `maxBlocks`, `durabilityMode`.
 
-### Not yet implemented
+### Not yet implemented - v0.0.1
+
 - Excavation behavior (planned for v0.1.0).

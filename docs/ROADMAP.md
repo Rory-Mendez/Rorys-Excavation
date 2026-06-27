@@ -6,6 +6,12 @@ This roadmap describes planned directions for Rory's Excavation. Nothing here is
 
 ## Released
 
+### v0.6.0
+- Block drops for excavated blocks: extra blocks call `Block.dropBlockAsItemWithChance` before removal, preserving native and modded drop tables.
+- Tightly clustered drops: newly spawned `EntityItem` objects are repositioned to the center of the original broken block and their velocity is zeroed, eliminating the vanilla random offset and upward kick that caused scatter.
+- Extra blocks removed silently: no break sound or particles per extra block.
+- Confirmed and documented: `pb` = Block, `pb.m` = blocksList[4096], `pb.a(xd,IIII,F,I)` = dropBlockAsItemWithChance, `xd.F` = isRemote (always false in SSP), `xd.b` = loadedEntityList, `nn.d(DDD)` = setPosition, `nn.r/s/t` = motionX/Y/Z.
+
 ### v0.5.0
 - Full vein excavation: when activation key is held, all connected matching blocks (up to `maxBlocks`) are broken in one action.
 - `ExcavationDetector.bfsCollectBlocks` — returns full BFS position list; `bfsFirstConnectedBlock` removed.
@@ -42,13 +48,9 @@ This roadmap describes planned directions for Rory's Excavation. Nothing here is
 
 ## Planned
 
-### vNext — Core Excavation
-- Activation key detection (hold key + break block).
-- BFS traversal of connected same-type blocks.
-- Configurable `maxBlocks` limit (default 64).
-- Configurable `damagePerBlock`: `false` = deduct durability once for the chain; `true` = once per block broken.
-- Drops handled as close to vanilla behavior as possible.
-- Block blacklist support.
+### vNext — Polish
+- Tool durability: `damagePerBlock=false` (default) deducts once per chain; `true` deducts once per block.
+- Block blacklist: config-driven list of block IDs to never excavate.
 
 ### Polish
 - In-game feedback: particle or sound cue when excavation triggers.

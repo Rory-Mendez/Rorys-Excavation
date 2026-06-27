@@ -21,24 +21,44 @@ import java.util.List;
  * <ol>
  *   <li>Always: runs BFS to count connected matching blocks and reports the count.</li>
  *   <li>Only when the configured activation key is held: collects all connected matching
- *       blocks (up to maxBlocks) and removes each via {@code World.setBlockWithNotify},
- *       then reports the count excavated.</li>
+ *       blocks (up to maxBlocks), spawns their drops clustered at the original broken
+ *       position, and removes each via {@code World.setBlockWithNotify}.</li>
  * </ol>
  *
  * <h3>Obfuscated runtime names used (Minecraft 1.2.5 / Forge 3.4.9.171):</h3>
  * <pre>
- *   net.minecraft.client.Minecraft.h  → thePlayer          (vq)
- *   net.minecraft.client.Minecraft.f  → theWorld           (xd)
- *   net.minecraft.client.Minecraft.w  → ingameGUI          (aiy = GuiIngame)
- *   net.minecraft.client.Minecraft.z  → objectMouseOver    (pl)
- *   aiy.a(String)                     → printChatMessage   (confirmed: adds nt to chat List)
- *   pl.g                              → entityHit          (nn)  — null when targeting a block
- *   pl.b / pl.c / pl.d               → blockX / blockY / blockZ
- *   xd.a(int,int,int)                → getBlockId          (confirmed: delegates to ack.a:(III)I)
- *   xd.e(int,int,int)                → getBlockMetadata    (confirmed: delegates to ack.c:(III)I)
- *   xd.g(int,int,int,int)            → setBlockWithNotify  (confirmed: calls d(IIII)Z then h(IIII)V
- *                                       which issues k(III)V + j(IIII)V neighbor notifications)
+ *   net.minecraft.client.Minecraft.h       → thePlayer          (vq)
+ *   net.minecraft.client.Minecraft.f       → theWorld           (xd)
+ *   net.minecraft.client.Minecraft.w       → ingameGUI          (aiy = GuiIngame)
+ *   net.minecraft.client.Minecraft.z       → objectMouseOver    (pl)
+ *   aiy.a(String)                          → printChatMessage
+ *   pl.g                                   → entityHit (nn)  — null when targeting a block
+ *   pl.b / pl.c / pl.d                     → blockX / blockY / blockZ
+ *   xd.a(int,int,int)                      → getBlockId
+ *   xd.e(int,int,int)                      → getBlockMetadata
+ *   xd.g(int,int,int,int)                  → setBlockWithNotify
+ *   xd.b                                   → loadedEntityList (List; all live non-player entities)
+ *   xd.F                                   → isRemote (boolean; always false for mc.f in SSP)
+ *   pb                                     → Block class
+ *   pb.m                                   → Block.blocksList (static pb[], size 4096)
+ *   pb.a(xd,int,int,int,int,float,int)     → dropBlockAsItemWithChance(world,x,y,z,meta,chance,fortune)
+ *   fq                                     → EntityItem (item entity; extends nn)
+ *   nn.d(double,double,double)             → setPosition(x,y,z); updates posX/Y/Z and AABB
+ *   nn.r / nn.s / nn.t                     → motionX / motionY / motionZ (public double)
  * </pre>
+ *
+ * <h3>Drop clustering (v0.7.0):</h3>
+ * <p>Extra excavated blocks are harvested silently: no break sound, no particles.
+ * {@code Block.dropBlockAsItemWithChance} is still called for each extra block so that
+ * native and modded drop tables are respected. After each call, every {@code EntityItem}
+ * ({@code fq}) newly added to {@code xd.b} (loadedEntityList) is repositioned to the
+ * center of the original broken block and its velocity is zeroed. This eliminates the
+ * random spawn offset and the upward/sideways kick that would otherwise scatter items.</p>
+ *
+ * <p>{@code xd.F} (isRemote) is always {@code false} for {@code mc.f} in SSP:
+ * confirmed by javap inspection — all xd constructors initialise F to false, and the
+ * only xd subclass (je) never sets F to true. dropBlockAsItemWithChance returns early
+ * when isRemote is true, so verifying F=false is critical.</p>
  */
 public class ExcavationHandler implements ITickHandler {
 
@@ -119,12 +139,63 @@ public class ExcavationHandler implements ITickHandler {
                         @Override
                         public void setBlock(int x, int y, int z, int blockId) {
                             // xd.g(x,y,z,blockId) = World.setBlockWithNotify (confirmed).
-                            // Returns boolean (ignored — we don't need the dirty flag here).
                             theWorld.g(x, y, z, blockId);
                         }
                     };
 
+                    // pb      = Block class (confirmed by javap of minecraft-1.2.5-client.jar)
+                    // pb.m    = Block.blocksList (static pb[], size 4096, indexed by block ID)
+                    // pb.a(xd,int,int,int,int,float,int) = Block.dropBlockAsItemWithChance (confirmed)
+                    //
+                    // Drop clustering strategy (v0.7.0):
+                    //   1. Snapshot xd.b (loadedEntityList) size before calling the drop.
+                    //   2. Call dropBlockAsItemWithChance — this runs the full native/modded
+                    //      drop chain (idDropped, quantityDropped), constructs the ItemStack,
+                    //      and calls the protected Block.a(xd,x,y,z,ItemStack) spawner which
+                    //      applies a random [+0.15, +0.85] offset then invokes xd.a(nn) =
+                    //      spawnEntityInWorld, adding the EntityItem (fq) to xd.b.
+                    //   3. For every fq added to xd.b since the snapshot:
+                    //      - Call nn.d(cx, cy, cz) = setPosition (updates posX/Y/Z + AABB).
+                    //      - Zero nn.r/s/t (motionX/Y/Z) to prevent items from bouncing apart.
+                    //   This preserves native and modded drop logic while clustering all items
+                    //   tightly at the center of the original broken block.
+                    //
+                    // xd.b   = loadedEntityList (List; confirmed from spawnEntityInWorld bytecode)
+                    // nn.d   = setPosition(DDD)  (confirmed: puts nn.o/p/q + updates AABB nn.y)
+                    // nn.r/s/t = motionX/Y/Z     (confirmed: public double fields in nn)
+                    //
+                    // All BFS-matched extra blocks share prevBlockId and prevMeta (BFS matches
+                    // by both id and meta), so prevMeta is correct for every drop call.
+                    pb blockInst = (prevBlockId >= 0 && prevBlockId < pb.m.length)
+                            ? pb.m[prevBlockId] : null;
+
+                    // Center of the original broken block — all drops will be repositioned here.
+                    double cx = prevX + 0.5;
+                    double cy = prevY + 0.5;
+                    double cz = prevZ + 0.5;
+
                     for (int[] pos : targets) {
+                        if (blockInst != null) {
+                            // Snapshot entity list size before the drop call.
+                            int entityCountBefore = theWorld.b.size();
+
+                            // Spawn drops using native block logic (handles vanilla and modded).
+                            blockInst.a(theWorld, prevX, prevY, prevZ, prevMeta, 1.0f, 0);
+
+                            // Reposition and zero velocity on every EntityItem just spawned.
+                            for (int ei = entityCountBefore; ei < theWorld.b.size(); ei++) {
+                                Object ent = theWorld.b.get(ei);
+                                if (ent instanceof fq) {
+                                    fq item = (fq) ent;
+                                    // setPosition updates posX/Y/Z (nn.o/p/q) and the AABB.
+                                    item.d(cx, cy, cz);
+                                    item.r = 0.0; // motionX
+                                    item.s = 0.0; // motionY
+                                    item.t = 0.0; // motionZ
+                                }
+                            }
+                        }
+                        // Remove the extra block silently (no break sound, no particles).
                         ExcavationDetector.removeBlock(writer, pos[0], pos[1], pos[2]);
                     }
 

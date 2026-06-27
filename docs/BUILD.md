@@ -52,6 +52,13 @@ When `objectMouseOver` itself is `null`, the player is targeting nothing (MISS).
 When `pl.g == null`, the target is a block and `b/c/d` are valid coordinates.  
 When `pl.g != null`, the target is an entity and `b/c/d` should not be used.
 
+### `xd` (World) fields
+
+| MCP name | Runtime field | Type | Notes |
+|---|---|---|---|
+| `loadedEntityList` | `b` | `List` | All live non-player entities in the loaded world. `spawnEntityInWorld` adds non-player entities here. Snapshot `.size()` before a drop call, then iterate from that index after the call to find newly spawned entities. Confirmed from `spawnEntityInWorld` bytecode: `getfield b:List; aload entityArg; invokeinterface List.add`. |
+| `isRemote` | `F` | `boolean` | See `pb` section below. |
+
 ### `xd` (World) methods
 
 | MCP name | Runtime method | Confirmed by |
@@ -60,12 +67,68 @@ When `pl.g != null`, the target is an entity and `b/c/d` should not be used.
 | `getBlockMetadata(x, y, z)` | `e(int, int, int)` | `javap` confirms delegation to `ack.c:(III)I` |
 | `getBlockLightValue(x, y, z)` | `d(int, int, int)` | Delegates to `ack.b:(III)I`; returns combined sky+block light 0–255. **Not metadata.** |
 | `setBlockWithNotify(x, y, z, blockId)` | `g(int, int, int, int)` | Writes block via `d(IIII)Z` (→ `ack.a:(IIII)Z` + marks dirty), then notifies neighbors via `h(IIII)V` (→ `k(III)V` + `j(IIII)V`). Returns `boolean`. Pass `blockId=0` to remove a block. Confirmed by `javap -c` during v0.4.0 development. |
+| `spawnEntityInWorld(entity)` | `a(nn)` | Non-player entity path: adds to `xd.b` (loadedEntityList) and calls `ack.a(nn)` (chunk entity list). Returns `boolean`. Confirmed by `javap -c`. |
 
 ### `vq` (EntityClientPlayerMP) / `yw` (EntityPlayer) methods
 
 | MCP name | Runtime method |
 |---|---|
 | `isSneaking()` | `V()` |
+
+### `pb` (Block) class — confirmed v0.6.0
+
+`pb` is the Block base class. Confirmed by `javap` of `minecraft-1.2.5-client.jar`: it holds all static block instances and the global `blocksList` array.
+
+| MCP name | Runtime identifier | Type / signature | Notes |
+|---|---|---|---|
+| `Block` | `pb` | class | Base class for all blocks. Vanilla and modded blocks extend `pb` directly or through subclasses. |
+| `Block.blocksList` | `pb.m` | `static pb[]` (size 4096) | The global block registry, indexed by block ID. `pb.m[0]` = air (null). Size is 4096 — Forge-extended range. |
+| `Block.dropBlockAsItemWithChance(world,x,y,z,meta,chance,fortune)` | `pb.a(xd, int, int, int, int, float, int)` | `void` | Calls `idDropped(meta,rand,fortune)` + `quantityDropped(fortune,rand)` on the block, then spawns an `EntityItem` (`fq`) via `xd.a(nn)`. Guards on `xd.F` (isRemote): returns early if `true`. In SSP `mc.f.F` is always `false`, so drops run. |
+| `Block.dropBlockAsItem(world,x,y,z,meta,fortune)` | `pb.a(xd, int, int, int, int, int)` (final) | `void` | Convenience wrapper: calls `dropBlockAsItemWithChance` with `chance=1.0f`. |
+| `Block.idDropped(meta, rand, fortune)` | `pb.a(int, Random, int)` | `int` | Returns the item ID that this block drops. Override in subclass for custom drops. |
+| `Block.quantityDroppedWithBonus(fortune, rand)` | `pb.a(int, Random)` | `int` | Returns the drop count given fortune level. |
+
+#### `xd.F` — `World.isRemote` (critical for drops)
+
+`xd.F` is a `boolean` field on `xd` (World). `dropBlockAsItemWithChance` reads it and returns early (no drops) if `true`.
+
+Confirmed by `javap -c` on `xd.class`: all three `xd` constructors set `F = false` (`iconst_0; putfield F:Z`). The only World subclass in the client jar (`je extends xd`) also never sets `F = true`. Therefore `mc.f.F == false` in SSP, and `dropBlockAsItemWithChance` executes fully when called on `mc.f`.
+
+#### Supporting classes
+
+| Obfuscated | Deobfuscated | Notes |
+|---|---|---|
+| `fq` | `EntityItem` | Extends `nn` (Entity). Has field `fq.a` (type `aan` = ItemStack) and `fq.c` (int pickup delay, set to 10 on spawn). |
+| `aan` | `ItemStack` | Item + count + damage. Used as the `fq.a` payload. |
+| `je` | *(WorldClient subclass)* | The only xd subclass in the client jar. Constructor takes `adl, fj, int, int`; passes `"MpServer"` to the xd base constructor. Never sets `xd.F = true`. |
+
+### `nn` (Entity) fields — motion and position
+
+| MCP name | Runtime field | Type | Notes |
+|---|---|---|---|
+| `posX` | `nn.o` | `double` | Confirmed: `nn.d(DDD)` puts arg1 into field `o`. |
+| `posY` | `nn.p` | `double` | Confirmed: `nn.d(DDD)` puts arg2 into field `p`. |
+| `posZ` | `nn.q` | `double` | Confirmed: `nn.d(DDD)` puts arg3 into field `q`. |
+| `motionX` | `nn.r` | `double` | Confirmed: `fq` constructor puts `rand*0.2-0.1` into field `r`. Public on `nn`. |
+| `motionY` | `nn.s` | `double` | Confirmed: `fq` constructor puts `0.2` into field `s`. Public on `nn`. |
+| `motionZ` | `nn.t` | `double` | Confirmed: `fq` constructor puts `rand*0.2-0.1` into field `t`. Public on `nn`. |
+
+### `nn` (Entity) methods — position
+
+| Signature | MCP name | Notes |
+|---|---|---|
+| `nn.d(double, double, double)` | `setPosition(x, y, z)` | Sets `nn.o/p/q` (posX/Y/Z) and updates the bounding box `nn.y` (AxisAlignedBB). Use this rather than setting `o/p/q` directly so the AABB stays in sync. Confirmed from `nn.d(DDD)` bytecode. |
+
+#### Vanilla spawn offset (why drops scatter without the v0.7.0 fix)
+
+`Block.a(xd, int, int, int, aan)` (the protected internal spawner called by `dropBlockAsItemWithChance`) applies:
+```
+float s = 0.7f
+spawnX = blockX + rand.nextFloat() * s + (1-s)*0.5   // → blockX + [+0.15, +0.85]
+spawnY = blockY + rand.nextFloat() * s + (1-s)*0.5
+spawnZ = blockZ + rand.nextFloat() * s + (1-s)*0.5
+```
+The `fq` constructor additionally sets `nn.r = rand*0.2 - 0.1`, `nn.s = 0.2` (upward), `nn.t = rand*0.2 - 0.1`. The fixed upward kick combined with random horizontal velocity is the primary cause of scatter across many ticks. The v0.7.0 fix calls `nn.d(cx, cy, cz)` and zeros `r/s/t` on every spawned `fq` immediately after `dropBlockAsItemWithChance` returns.
 
 ---
 
@@ -98,7 +161,7 @@ Named-package code (`ModConfig`) is fine — it only touches Forge config APIs, 
 | Java JDK | 8+ | Must be a JDK (includes `javac`). JDK 21 works with `-source 8 -target 8`; warnings about obsolete source/target are safe to ignore. JDK 8 is ideal to avoid them. |
 | `minecraft-1.2.5-client.jar` | 1.2.5 | Prism caches at `PrismLauncher/libraries/com/mojang/minecraft/1.2.5/` |
 | `forge-1.2.5-3.4.9.171-client.jar` | 3.4.9.171 | Prism caches at `PrismLauncher/libraries/net/minecraftforge/forge/1.2.5-3.4.9.171/` |
-| LWJGL | 2.x | Prism caches at `PrismLauncher/libraries/org/lwjgl/` |
+| LWJGL | 2.9.4 | Prism caches at `PrismLauncher/libraries/org/lwjgl/lwjgl/lwjgl/2.9.4-nightly-20150209/lwjgl-2.9.4-nightly-20150209.jar` |
 
 ---
 
@@ -130,13 +193,13 @@ mkdir build\classes
 
 ```bat
 cd build\classes
-jar cf ..\..\rorys-excavation-0.5.0.jar .
+jar cf ..\..\rorys-excavation-0.6.0.jar .
 ```
 
 ### Step 3 — Verify
 
 ```bat
-jar -tf rorys-excavation-0.5.0.jar
+jar -tf rorys-excavation-0.6.0.jar
 ```
 
 Expected contents:
