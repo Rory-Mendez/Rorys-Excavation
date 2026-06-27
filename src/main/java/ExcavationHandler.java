@@ -11,16 +11,18 @@ import cpw.mods.fml.common.TickType;
 import org.lwjgl.input.Keyboard;
 
 import java.util.EnumSet;
+import java.util.List;
 
 /**
- * GAME-tick handler for block-break detection, BFS search, and single-block excavation.
+ * GAME-tick handler for block-break detection, BFS search, and vein excavation.
  *
  * Polls {@code Minecraft.objectMouseOver} (runtime field: {@code mc.z}, type {@code pl})
  * each tick. When a tracked block transitions to air:
  * <ol>
  *   <li>Always: runs BFS to count connected matching blocks and reports the count.</li>
- *   <li>Only when the configured activation key is held: breaks exactly one extra
- *       connected block (the first BFS result) via {@code World.setBlockWithNotify}.</li>
+ *   <li>Only when the configured activation key is held: collects all connected matching
+ *       blocks (up to maxBlocks) and removes each via {@code World.setBlockWithNotify},
+ *       then reports the count excavated.</li>
  * </ol>
  *
  * <h3>Obfuscated runtime names used (Minecraft 1.2.5 / Forge 3.4.9.171):</h3>
@@ -98,28 +100,21 @@ public class ExcavationHandler implements ITickHandler {
                 }
             };
 
-            // ── Always: BFS count for debug reporting ─────────────────────────
-            int connected = ExcavationDetector.bfsConnectedBlocks(
-                    reader, prevBlockId, prevMeta, prevX, prevY, prevZ,
-                    config.getMaxBlocks());
-
-            if (mc.w != null) {
-                mc.w.a("[RorysExcavation] Found " + connected
-                        + " connected blocks for id=" + prevBlockId
-                        + " meta=" + prevMeta);
-            }
-
             // ── Activation key gate ───────────────────────────────────────────
             // Keyboard.isKeyDown(int) is the confirmed LWJGL 2.x API for this version.
             // Key code comes from config (default: Keyboard.KEY_GRAVE = 41).
             boolean keyHeld = Keyboard.isKeyDown(config.getActivationKeyCode());
 
-            if (keyHeld && connected > 0) {
-                // Find and break exactly one extra connected matching block.
-                int[] target = ExcavationDetector.bfsFirstConnectedBlock(
-                        reader, prevBlockId, prevMeta, prevX, prevY, prevZ);
+            if (keyHeld) {
+                // ── Excavation path: collect all connected blocks then remove them ─
+                // bfsCollectBlocks returns positions capped at maxBlocks; the broken
+                // block's own position is excluded by BFS (it is now air and does not
+                // match brokenId).
+                List<int[]> targets = ExcavationDetector.bfsCollectBlocks(
+                        reader, prevBlockId, prevMeta, prevX, prevY, prevZ,
+                        config.getMaxBlocks());
 
-                if (target != null) {
+                if (!targets.isEmpty()) {
                     ExcavationDetector.WorldWriter writer = new ExcavationDetector.WorldWriter() {
                         @Override
                         public void setBlock(int x, int y, int z, int blockId) {
@@ -129,14 +124,26 @@ public class ExcavationHandler implements ITickHandler {
                         }
                     };
 
-                    ExcavationDetector.removeBlock(writer, target[0], target[1], target[2]);
+                    for (int[] pos : targets) {
+                        ExcavationDetector.removeBlock(writer, pos[0], pos[1], pos[2]);
+                    }
 
                     if (mc.w != null) {
-                        mc.w.a("[RorysExcavation] Excavated 1 extra block"
-                                + " id=" + prevBlockId
-                                + " meta=" + prevMeta
-                                + " pos=(" + target[0] + "," + target[1] + "," + target[2] + ")");
+                        mc.w.a("[RorysExcavation] Excavated " + targets.size()
+                                + " extra blocks for id=" + prevBlockId
+                                + " meta=" + prevMeta);
                     }
+                }
+            } else {
+                // ── Count-only path: report but do not modify the world ───────────
+                int connected = ExcavationDetector.bfsConnectedBlocks(
+                        reader, prevBlockId, prevMeta, prevX, prevY, prevZ,
+                        config.getMaxBlocks());
+
+                if (mc.w != null) {
+                    mc.w.a("[RorysExcavation] Found " + connected
+                            + " connected blocks for id=" + prevBlockId
+                            + " meta=" + prevMeta);
                 }
             }
 

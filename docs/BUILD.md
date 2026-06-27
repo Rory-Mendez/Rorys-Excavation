@@ -130,13 +130,13 @@ mkdir build\classes
 
 ```bat
 cd build\classes
-jar cf ..\..\rorys-excavation-0.4.0.jar .
+jar cf ..\..\rorys-excavation-0.5.0.jar .
 ```
 
 ### Step 3 — Verify
 
 ```bat
-jar -tf rorys-excavation-0.4.0.jar
+jar -tf rorys-excavation-0.5.0.jar
 ```
 
 Expected contents:

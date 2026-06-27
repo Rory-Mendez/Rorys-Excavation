@@ -1,7 +1,9 @@
 package com.rorysmod.excavation.feature;
 
 import java.util.ArrayDeque;
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Queue;
 import java.util.Set;
 import java.util.logging.Logger;
@@ -71,8 +73,9 @@ public final class ExcavationDetector {
 
     /**
      * BFS over face-adjacent blocks that share the same block ID and metadata as
-     * the broken block. Returns the total count of connected matching blocks found,
-     * capped at {@code maxBlocks}. Does not modify the world.
+     * the broken block. Returns the count of connected matching blocks found,
+     * capped at {@code maxBlocks}. Does not allocate a position list — use this
+     * path when no world modification is required (key not held).
      *
      * @param world      Thin query interface over the live Minecraft world.
      * @param brokenId   Block ID that was broken (never 0).
@@ -106,9 +109,13 @@ public final class ExcavationDetector {
     }
 
     /**
-     * BFS that returns the coordinates of the first connected matching block found,
-     * or {@code null} if no connected matching blocks exist. Used when we need to
-     * act on exactly one block rather than count the whole set.
+     * BFS over face-adjacent blocks that share the same block ID and metadata as
+     * the broken block. Returns the positions of all connected matching blocks
+     * found, capped at {@code maxBlocks}. Use this path when the caller needs to
+     * act on each block (key held — full excavation).
+     *
+     * <p>The broken block's own position is excluded from the result; it was
+     * already removed by the player.</p>
      *
      * @param world      Thin query interface over the live Minecraft world.
      * @param brokenId   Block ID that was broken (never 0).
@@ -116,20 +123,29 @@ public final class ExcavationDetector {
      * @param startX     World X of the broken block.
      * @param startY     World Y of the broken block.
      * @param startZ     World Z of the broken block.
-     * @return int[]{x, y, z} of the first BFS-reachable matching block, or null.
+     * @param maxBlocks  Upper limit on how many blocks to collect.
+     * @return List of int[]{x, y, z} for each connected matching block, size 0–maxBlocks.
      */
-    public static int[] bfsFirstConnectedBlock(
+    public static List<int[]> bfsCollectBlocks(
             WorldReader world,
             int brokenId, int brokenMeta,
-            int startX, int startY, int startZ) {
+            int startX, int startY, int startZ,
+            int maxBlocks) {
 
         Set<Long> visited = new HashSet<>();
         Queue<int[]> queue = new ArrayDeque<>();
+        List<int[]> result = new ArrayList<>();
 
         visited.add(posKey(startX, startY, startZ));
         seedQueue(world, brokenId, brokenMeta, startX, startY, startZ, visited, queue);
 
-        return queue.isEmpty() ? null : queue.poll();
+        while (!queue.isEmpty() && result.size() < maxBlocks) {
+            int[] pos = queue.poll();
+            result.add(pos);
+            seedQueue(world, brokenId, brokenMeta, pos[0], pos[1], pos[2], visited, queue);
+        }
+
+        return result;
     }
 
     // ─────────────────────────────────────────────────────────────────────────

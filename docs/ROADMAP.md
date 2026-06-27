@@ -6,6 +6,11 @@ This roadmap describes planned directions for Rory's Excavation. Nothing here is
 
 ## Released
 
+### v0.5.0
+- Full vein excavation: when activation key is held, all connected matching blocks (up to `maxBlocks`) are broken in one action.
+- `ExcavationDetector.bfsCollectBlocks` — returns full BFS position list; `bfsFirstConnectedBlock` removed.
+- Key not held: count-only reporting, no world changes.
+
 ### v0.4.0
 - Activation-key gate: excavation only fires while the configured `activationKey` is held.
 - Breaks exactly one extra connected matching block (first BFS result) when the key is held.

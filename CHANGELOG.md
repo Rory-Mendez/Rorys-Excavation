@@ -7,6 +7,22 @@ Versioning: [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.5.0] — 2026-06-27
+
+### Added
+- **Full vein excavation**: when the activation key is held, BFS now collects all connected matching blocks (up to `maxBlocks`, default 64) and removes every one of them via `World.setBlockWithNotify`. Previously only one extra block was broken.
+- `ExcavationDetector.bfsCollectBlocks` — BFS variant that returns `List<int[]>` of all matching connected positions (capped at `maxBlocks`). Used by the excavation path so the caller can iterate and break each block.
+- `ExcavationHandler` now branches on key state: key held → `bfsCollectBlocks` + remove loop; key not held → `bfsConnectedBlocks` count only (no allocation, no world change).
+- Chat message when key held: `[RorysExcavation] Excavated <count> extra blocks for id=<id> meta=<meta>`.
+
+### Removed
+- `ExcavationDetector.bfsFirstConnectedBlock` — superseded by `bfsCollectBlocks`. The v0.4.0 single-block path is replaced by the full-vein loop.
+
+### Not yet implemented
+- Tool damage, drops, blacklist.
+
+---
+
 ## [0.4.0] — 2026-06-27
 
 ### Added
