@@ -12,11 +12,12 @@ import cpw.mods.fml.common.TickType;
 import java.util.EnumSet;
 
 /**
- * GAME-tick handler for block-break detection.
+ * GAME-tick handler for block-break detection and BFS connected-block search.
  *
  * Polls {@code Minecraft.objectMouseOver} (runtime field: {@code mc.z}, type {@code pl})
  * each tick. Tracks the block ID at the targeted position. When it transitions from
- * non-air to air, delegates to {@link ExcavationDetector#onBlockBroken}.
+ * non-air to air, runs a BFS to count all connected matching blocks and reports
+ * the result in chat. No blocks are broken; this release is debug-only.
  *
  * <h3>Obfuscated runtime names used (Minecraft 1.2.5 / Forge 3.4.9.171):</h3>
  * <pre>
@@ -28,7 +29,6 @@ import java.util.EnumSet;
  *   pl.g                              → entityHit          (nn)  — null when targeting a block
  *   pl.b / pl.c / pl.d               → blockX / blockY / blockZ
  *   xd.a(int,int,int)                → getBlockId          (confirmed: delegates to ack.a)
- *   xd.d(int,int,int)                → getBlockLightValue  (NOT metadata — returns 255 in full daylight)
  *   xd.e(int,int,int)                → getBlockMetadata    (confirmed: delegates to ack.c)
  * </pre>
  */
@@ -76,29 +76,29 @@ public class ExcavationHandler implements ITickHandler {
                         + " pos=(" + prevX + "," + prevY + "," + prevZ + ")");
             }
 
-            // ── Neighbor scan ─────────────────────────────────────────────────
-            // Read block ID and metadata at the 6 orthogonal face-adjacent positions.
-            // +X, -X, +Y, -Y, +Z, -Z — order matches the arrays passed to the feature class.
+            // ── BFS connected-block search ────────────────────────────────────────
+            // Capture the world reference before the anonymous class so the
+            // compiler treats it as effectively final.
             // xd.a = getBlockId, xd.e = getBlockMetadata (both confirmed).
-            int[] nIds  = new int[6];
-            int[] nMeta = new int[6];
-            int[] offX  = { 1, -1,  0,  0,  0,  0 };
-            int[] offY  = { 0,  0,  1, -1,  0,  0 };
-            int[] offZ  = { 0,  0,  0,  0,  1, -1 };
-            for (int i = 0; i < 6; i++) {
-                int nx = prevX + offX[i];
-                int ny = prevY + offY[i];
-                int nz = prevZ + offZ[i];
-                nIds[i]  = mc.f.a(nx, ny, nz);
-                nMeta[i] = mc.f.e(nx, ny, nz);
-            }
+            final xd theWorld = mc.f;
+            ExcavationDetector.WorldReader reader = new ExcavationDetector.WorldReader() {
+                @Override
+                public int getBlockId(int x, int y, int z) {
+                    return theWorld.a(x, y, z);
+                }
+                @Override
+                public int getBlockMeta(int x, int y, int z) {
+                    return theWorld.e(x, y, z);
+                }
+            };
 
-            int matchCount = ExcavationDetector.countMatchingNeighbors(
-                    prevBlockId, prevMeta, nIds, nMeta);
+            int connected = ExcavationDetector.bfsConnectedBlocks(
+                    reader, prevBlockId, prevMeta, prevX, prevY, prevZ,
+                    config.getMaxBlocks());
 
             if (mc.w != null) {
-                mc.w.a("[RorysExcavation] Found " + matchCount
-                        + " matching neighbors for id=" + prevBlockId
+                mc.w.a("[RorysExcavation] Found " + connected
+                        + " connected blocks for id=" + prevBlockId
                         + " meta=" + prevMeta);
             }
 

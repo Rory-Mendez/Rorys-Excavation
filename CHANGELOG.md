@@ -7,6 +7,20 @@ Versioning: [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.3.0] — 2026-06-27
+
+### Added
+- `ExcavationDetector.WorldReader` — minimal two-method interface (`getBlockId`, `getBlockMeta`) that lets BFS logic query the world without touching obfuscated Minecraft types.
+- `ExcavationDetector.bfsConnectedBlocks` — BFS traversal (not recursive DFS) that starts from the 6 immediate neighbors of the broken block, expands face-adjacently, matches by block ID and metadata, and caps at `maxBlocks` (default 64). Uses `HashSet<Long>` for visited tracking via a packed-long position key.
+- `ExcavationHandler` now creates an anonymous `WorldReader` that delegates to the confirmed `xd.a` / `xd.e` world methods and passes it to BFS after each detected break.
+- New in-game chat message after each break: `[RorysExcavation] Found <count> connected blocks for id=<id> meta=<meta>`.
+
+### Not yet implemented
+- No blocks are broken (debug-only release).
+- No tool damage, no drops, no blacklist.
+
+---
+
 ## [0.2.0] — 2026-06-27
 
 ### Added

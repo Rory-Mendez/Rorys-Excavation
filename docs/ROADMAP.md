@@ -6,6 +6,12 @@ This roadmap describes planned directions for Rory's Excavation. Nothing here is
 
 ## Released
 
+### v0.3.0
+- BFS connected-block search: after each detected break, runs a BFS from the 6 neighbors of the broken block, matching by block ID and metadata, capped at `maxBlocks` (default 64).
+- `ExcavationDetector.WorldReader` interface isolates BFS logic from obfuscated MC types.
+- Chat message: `[RorysExcavation] Found <count> connected blocks for id=<id> meta=<meta>`.
+- Debug-only: no blocks are broken, no tool damage, no drops.
+
 ### v0.2.0
 - Neighbor scan: after each detected break, inspects the 6 face-adjacent block positions and counts how many share the same block ID and metadata.
 - Chat message: `[RorysExcavation] Found <n> matching neighbors for id=<id> meta=<meta>`.
