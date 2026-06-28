@@ -102,6 +102,28 @@ Confirmed by `javap -c` on `xd.class`: all three `xd` constructors set `F = fals
 | `aan` | `ItemStack` | Item + count + damage. Used as the `fq.a` payload. |
 | `je` | *(WorldClient subclass)* | The only xd subclass in the client jar. Constructor takes `adl, fj, int, int`; passes `"MpServer"` to the xd base constructor. Never sets `xd.F = true`. |
 
+### `acq` (EntityLivingBase), `yw` (EntityPlayer), `qu` (PlayerCapabilities) — durability
+
+Confirmed by `javap` of `minecraft-1.2.5-client.jar` during Rory's Excavation v0.7.0 development.
+
+| Obfuscated | MCP name | Type | Notes |
+|---|---|---|---|
+| `acq` | `EntityLivingBase` | class | Abstract living entity. Parent of `yw` (EntityPlayer). `aan.a(int, acq)` = damageItem takes this type. `vq extends yw extends acq`, so `mc.h` is a valid `acq`. |
+| `yw.ah()` | `getCurrentEquippedItem()` | `aan` | Returns `yw.d` (private `aan` field = held ItemStack). Returns `null` when the player's hand is empty. Always null-check before using. |
+| `yw.aT` | `PlayerCapabilities` | `qu` | Public field. Holds capability booleans for the player. |
+| `qu.c` | `isCreativeMode` | `boolean` | Confirmed: `yw.e(float)` = addExhaustion returns immediately when `qu.c` is true. `damageItem` does NOT check creative mode internally in 1.2.5 — the caller must guard it. |
+| `qu.a` | `disableDamage` | `boolean` | Confirmed: `yw.a(md, int)` = attackEntityFrom returns false (no damage) when `qu.a` is true. |
+
+#### `aan` (ItemStack) — durability methods
+
+| Signature | MCP name | Notes |
+|---|---|---|
+| `aan.e()` | `isItemStackDamageable()` | Returns true if `yr.h() > 0` (item has max durability > 0). Returns false for items that cannot be damaged (blocks in hand, food, etc.). `damageItem` also checks this internally and returns early if false, but checking first is cleaner. |
+| `aan.a(int, acq)` | `damageItem(int amount, EntityLivingBase entity)` | The complete vanilla damage method. Guards: (1) `e()` = isItemStackDamageable, if false return. (2) If entity is `yw` (EntityPlayer): reads `yw.ap` = InventoryPlayer, calls `ais.c(aak)` = EnchantmentHelper.getUnbreakingModifier; if modifier > 0, calls `world.random.nextInt(modifier+1)` and returns (skip damage) if result > 0. (3) `e:I += amount` (itemDamage += amount). (4) If `e:I > j()` (maxDamage): calls `acq.c(aan)` = renderBrokenItemStack (plays break animation/sound), updates stat via `yw.a(ajw, 1)`, decrements `a:I` (stackSize), clamps to 0, resets `e:I` = 0. |
+| `aan.a` | `stackSize` | `public int`. Guard `> 0` before calling damageItem to avoid triggering the break animation multiple times if the tool already broke on a previous iteration. |
+| `aan.h()` / `aan.i()` | `getItemDamage()` | Both return field `e:I` (itemDamage). Two aliases for the same field. |
+| `aan.b(int)` | `setItemDamage(int)` | Puts int into field `e:I`. Direct write — no Unbreaking, no break check. Use `damageItem` instead. |
+
 ### `nn` (Entity) fields — motion and position
 
 | MCP name | Runtime field | Type | Notes |
@@ -193,13 +215,13 @@ mkdir build\classes
 
 ```bat
 cd build\classes
-jar cf ..\..\rorys-excavation-0.6.0.jar .
+jar cf ..\..\rorys-excavation-0.7.0.jar .
 ```
 
 ### Step 3 — Verify
 
 ```bat
-jar -tf rorys-excavation-0.6.0.jar
+jar -tf rorys-excavation-0.7.0.jar
 ```
 
 Expected contents:

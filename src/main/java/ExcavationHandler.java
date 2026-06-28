@@ -45,15 +45,31 @@ import java.util.List;
  *   fq                                     → EntityItem (item entity; extends nn)
  *   nn.d(double,double,double)             → setPosition(x,y,z); updates posX/Y/Z and AABB
  *   nn.r / nn.s / nn.t                     → motionX / motionY / motionZ (public double)
+ *   acq                                    → EntityLivingBase (abstract; vq extends yw extends acq)
+ *   yw.av()                                → getCurrentEquippedItem(); delegates to aak.b() = ap.a[ap.c]
+ *   yw.ah()                                → getItemInUse(); returns yw.d (null unless eating/drinking)
+ *   yw.aT                                  → PlayerCapabilities (type qu; public field)
+ *   qu.c                                   → isCreativeMode (boolean; confirmed: addExhaustion skips when true)
+ *   aan.a(int,acq)                         → damageItem(amount,EntityLivingBase); handles Unbreaking + tool break
+ *   aan.e()                                → isItemStackDamageable(); yr.h() > 0 (item has max durability)
+ *   aan.a                                  → stackSize (public int)
  * </pre>
  *
- * <h3>Drop clustering (v0.7.0):</h3>
+ * <h3>Drop clustering (v0.6.0):</h3>
  * <p>Extra excavated blocks are harvested silently: no break sound, no particles.
  * {@code Block.dropBlockAsItemWithChance} is still called for each extra block so that
  * native and modded drop tables are respected. After each call, every {@code EntityItem}
  * ({@code fq}) newly added to {@code xd.b} (loadedEntityList) is repositioned to the
  * center of the original broken block and its velocity is zeroed. This eliminates the
  * random spawn offset and the upward/sideways kick that would otherwise scatter items.</p>
+ *
+ * <h3>Tool durability (v0.7.0):</h3>
+ * <p>{@code ItemStack.damageItem} ({@code aan.a(int, acq)}) is called on the held item
+ * after the extra blocks are removed. It handles Unbreaking enchantments (random skip),
+ * damage accumulation, and tool-break animation + inventory cleanup when max durability
+ * is exceeded. Creative mode ({@code qu.c}) is checked by this mod before calling
+ * damageItem because 1.2.5's damageItem does not perform that check internally.
+ * Empty hand is guarded by a null check on {@code yw.av()}.</p>
  *
  * <p>{@code xd.F} (isRemote) is always {@code false} for {@code mc.f} in SSP:
  * confirmed by javap inspection — all xd constructors initialise F to false, and the
@@ -174,6 +190,28 @@ public class ExcavationHandler implements ITickHandler {
                     double cy = prevY + 0.5;
                     double cz = prevZ + 0.5;
 
+                    // ── Tool durability setup ─────────────────────────────────────
+                    // yw.av()    = getCurrentEquippedItem(); delegates to aak.b() = ap.a[ap.c]
+                    // yw.ah()    = getItemInUse(); returns yw.d — null unless player is eating/drinking
+                    // aak.c      = currentItem (selected hotbar slot 0-8)
+                    // yw.aT      = PlayerCapabilities (qu; public)
+                    // qu.c       = isCreativeMode (confirmed: addExhaustion skips when true)
+                    // aan.b()    = getMaxDamage(ItemStack); calls virtual yr.g(aan) — overridden by tools
+                    // aan.a(I,acq) = damageItem(amount, EntityLivingBase)
+                    //               handles Unbreaking (random skip) and tool breaking.
+                    //               Does NOT check creative mode — must be guarded here.
+                    // aan.a      = stackSize (public int); guard > 0 to avoid repeated break FX
+                    //               if the tool already broke on a previous iteration.
+                    boolean damagePerBlock = config.isDamagePerBlock();
+                    boolean creative       = mc.h.aT.c;
+                    // yw.av() = getCurrentEquippedItem via inventory: ap.a[ap.c]
+                    // yw.ah() returns yw.d (itemInUse) which is null unless right-clicking to eat/drink.
+                    aan firstTool          = mc.h.av();
+
+                    // aan.b() calls virtual yr.g(aan) — overridden by tool subclasses to return max
+                    // damage. Base yr.g(aan) returns 0, so non-damageable items yield canDamage=false.
+                    boolean canDamage = firstTool != null && !creative && firstTool.b() > 0;
+
                     for (int[] pos : targets) {
                         if (blockInst != null) {
                             // Snapshot entity list size before the drop call.
@@ -197,6 +235,20 @@ public class ExcavationHandler implements ITickHandler {
                         }
                         // Remove the extra block silently (no break sound, no particles).
                         ExcavationDetector.removeBlock(writer, pos[0], pos[1], pos[2]);
+
+                        // Per-block durability: re-fetch via yw.av() each iteration in case
+                        // setBlockWithNotify triggered an inventory update mid-loop.
+                        if (damagePerBlock && !creative) {
+                            aan tool = mc.h.av();
+                            if (tool != null && tool.b() > 0 && tool.a > 0) {
+                                tool.a(1, mc.h);
+                            }
+                        }
+                    }
+
+                    // Per-chain durability: damage exactly once for the whole excavation.
+                    if (!damagePerBlock && canDamage && firstTool != null && firstTool.a > 0) {
+                        firstTool.a(1, mc.h);
                     }
 
                     if (mc.w != null) {

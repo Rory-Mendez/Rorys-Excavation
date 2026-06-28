@@ -2,7 +2,7 @@
 
 A lightweight Minecraft 1.2.5 quality-of-life mod inspired by FTB Ultimine / VeinMiner behavior.
 
-**Latest version:** v0.6.0  
+**Latest version:** v0.7.0  
 **Target:** Minecraft 1.2.5 · Forge 3.4.9.171 · FML 2.2.106.176
 
 ---
@@ -19,7 +19,7 @@ Part of the **Rory's Mods** ecosystem.
 
 When the player holds an activation key and breaks a block, Rory's Excavation finds all connected blocks of the same type and breaks up to a configurable maximum in one action — no more mining one ore at a time.
 
-Hold the configured key (default: Grave/tilde `` ` ``) while breaking a block and all face-adjacent connected blocks of the same type are broken in one action, up to the `maxBlocks` limit (default 64). All drops land tightly at the center of the original break position — no scatter. Extra blocks are harvested silently — no repeated break sounds or particles. Without the key, only detection and BFS count are reported — no world changes.
+Hold the configured key (default: Grave/tilde `` ` ``) while breaking a block and all face-adjacent connected blocks of the same type are broken in one action, up to the `maxBlocks` limit (default 64). All drops land tightly at the center of the original break position — no scatter. Extra blocks are harvested silently — no repeated break sounds or particles. Tool durability is consumed: once per chain (`damagePerBlock=false`, default) or once per extra block (`damagePerBlock=true`). Without the key, only detection and BFS count are reported — no world changes.
 
 ---
 
@@ -35,7 +35,7 @@ Hold the configured key (default: Grave/tilde `` ` ``) while breaking a block an
 
 See [docs/INSTALL.md](docs/INSTALL.md) for full instructions.
 
-Short version: drop `rorys-excavation-0.6.0.jar` into your `mods/` folder and launch.
+Short version: drop `rorys-excavation-0.7.0.jar` into your `mods/` folder and launch.
 
 ---
 

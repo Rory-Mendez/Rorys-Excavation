@@ -22,11 +22,22 @@ public final class ExcavationDetector {
     private static final Logger LOG = Logger.getLogger("Minecraft");
     private static final String PREFIX = "[RorysExcavation]";
 
-    private static final int[][] FACES = {
-        { 1, 0, 0}, {-1, 0, 0},
-        { 0, 1, 0}, { 0,-1, 0},
-        { 0, 0, 1}, { 0, 0,-1}
-    };
+    // All 26 neighbors of a block: faces (6) + edges (12) + corners (8).
+    // Diagonal connectivity is required for ore veins that touch only at edges or corners.
+    private static final int[][] NEIGHBORS;
+    static {
+        NEIGHBORS = new int[26][3];
+        int i = 0;
+        for (int dx = -1; dx <= 1; dx++) {
+            for (int dy = -1; dy <= 1; dy++) {
+                for (int dz = -1; dz <= 1; dz++) {
+                    if (dx != 0 || dy != 0 || dz != 0) {
+                        NEIGHBORS[i++] = new int[]{dx, dy, dz};
+                    }
+                }
+            }
+        }
+    }
 
     private ExcavationDetector() {}
 
@@ -72,10 +83,10 @@ public final class ExcavationDetector {
     // ─────────────────────────────────────────────────────────────────────────
 
     /**
-     * BFS over face-adjacent blocks that share the same block ID and metadata as
-     * the broken block. Returns the count of connected matching blocks found,
-     * capped at {@code maxBlocks}. Does not allocate a position list — use this
-     * path when no world modification is required (key not held).
+     * BFS over all 26 neighbors (faces, edges, corners) that share the same block
+     * ID and metadata as the broken block. Returns the count of connected matching
+     * blocks found, capped at {@code maxBlocks}. Does not allocate a position list
+     * — use this path when no world modification is required (key not held).
      *
      * @param world      Thin query interface over the live Minecraft world.
      * @param brokenId   Block ID that was broken (never 0).
@@ -109,10 +120,10 @@ public final class ExcavationDetector {
     }
 
     /**
-     * BFS over face-adjacent blocks that share the same block ID and metadata as
-     * the broken block. Returns the positions of all connected matching blocks
-     * found, capped at {@code maxBlocks}. Use this path when the caller needs to
-     * act on each block (key held — full excavation).
+     * BFS over all 26 neighbors (faces, edges, corners) that share the same block
+     * ID and metadata as the broken block. Returns the positions of all connected
+     * matching blocks found, capped at {@code maxBlocks}. Use this path when the
+     * caller needs to act on each block (key held — full excavation).
      *
      * <p>The broken block's own position is excluded from the result; it was
      * already removed by the player.</p>
@@ -170,10 +181,10 @@ public final class ExcavationDetector {
             int cx, int cy, int cz,
             Set<Long> visited,
             Queue<int[]> queue) {
-        for (int[] face : FACES) {
-            int nx = cx + face[0];
-            int ny = cy + face[1];
-            int nz = cz + face[2];
+        for (int[] n : NEIGHBORS) {
+            int nx = cx + n[0];
+            int ny = cy + n[1];
+            int nz = cz + n[2];
             if (world.getBlockId(nx, ny, nz) == id
                     && world.getBlockMeta(nx, ny, nz) == meta) {
                 long key = posKey(nx, ny, nz);

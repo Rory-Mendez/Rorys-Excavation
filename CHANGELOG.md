@@ -7,6 +7,34 @@ Versioning: [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.7.0] — 2026-06-28
+
+### Added - v0.7.0
+
+- **Tool durability** (`damagePerBlock` config option):
+  - `damagePerBlock=false` (default): the held tool loses exactly **1 durability** for the entire excavation chain, matching the single block the player manually broke.
+  - `damagePerBlock=true`: the held tool loses **1 durability per extra block** removed by excavation.
+- **Creative mode safe**: no durability is consumed when the player's capabilities flag `qu.c` (isCreativeMode) is true.
+- **Empty hand safe**: null check on `yw.av()` (getCurrentEquippedItem) prevents any crash when excavating bare-handed.
+- **Modded tool compatible**: uses `ItemStack.damageItem` (`aan.a(int, acq)`) — the same native method vanilla calls when breaking blocks — so Unbreaking enchantment, tool-break animation, inventory cleanup, and modded tool overrides all work correctly.
+- **Tool break handled correctly**: when a tool's durability runs out mid-chain, `damageItem` plays the vanilla break animation and sound once, sets stackSize to 0, and subsequent iterations are guarded (`tool.a > 0`) to prevent redundant break effects.
+- **26-neighbor BFS** (replaces 6-face): `ExcavationDetector` now checks all 26 neighboring positions per block — faces (6), edges (12), and corners (8). Diagonal ore veins and blocks touching only at edges or corners are now found and excavated correctly.
+- Confirmed and documented new obfuscated mappings: `acq` = EntityLivingBase, `yw.av()` = getCurrentEquippedItem (via `aak.b()` = `ap.a[ap.c]`), `yw.ah()` = getItemInUse (null unless eating/drinking), `yw.aT` = PlayerCapabilities (`qu`), `qu.c` = isCreativeMode, `aan.a(int,acq)` = damageItem, `aan.b()` = getMaxDamage via virtual `yr.g(aan)`, `aan.a` = stackSize.
+
+### How durability works - v0.7.0
+
+`mc.h.av()` returns the `aan` (ItemStack) in the selected hotbar slot, or null for empty hand. If null, or if `mc.h.aT.c` (isCreativeMode) is true, or if `tool.b()` (virtual getMaxDamage) returns 0, no damage is applied. Otherwise `tool.a(1, mc.h)` = `damageItem(1, player)` is called: it checks the Unbreaking enchantment level via `ais.c(yw.ap)` and uses `world.random.nextInt(level+1) > 0` to randomly skip damage. If damage is applied and `itemDamage > maxDamage`, vanilla destroys the item (`acq.c(aan)` plays the break animation, stackSize is decremented to 0).
+
+### How 26-neighbor BFS works - v0.7.0
+
+`ExcavationDetector.NEIGHBORS` is a static `int[26][3]` generated once over all `dx, dy, dz ∈ {-1, 0, 1}` except `(0,0,0)`. `seedQueue` iterates all 26 offsets per visited block. All other BFS logic (visited `HashSet<Long>`, `posKey` encoding, `maxBlocks` cap) is unchanged from v0.5.0.
+
+### Not yet implemented - v0.7.0
+
+- Blacklist.
+
+---
+
 ## [0.6.0] — 2026-06-27
 
 ### Added - v0.6.0

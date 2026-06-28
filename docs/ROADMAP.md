@@ -6,6 +6,11 @@ This roadmap describes planned directions for Rory's Excavation. Nothing here is
 
 ## Released
 
+### v0.7.0
+- Tool durability: `damagePerBlock=false` (default) deducts once per chain; `damagePerBlock=true` deducts once per extra block. Creative mode skipped. Empty hand safe. Native `damageItem` used — Unbreaking and modded tools work correctly.
+- 26-neighbor BFS: faces, edges, and corners are all searched. Diagonal ore veins are now found and fully excavated.
+- Confirmed mappings: `acq` = EntityLivingBase, `yw.av()` = getCurrentEquippedItem (hotbar slot), `yw.aT`/`qu.c` = isCreativeMode, `aan.a(int,acq)` = damageItem, `aan.b()` = getMaxDamage (virtual).
+
 ### v0.6.0
 - Block drops for excavated blocks: extra blocks call `Block.dropBlockAsItemWithChance` before removal, preserving native and modded drop tables.
 - Tightly clustered drops: newly spawned `EntityItem` objects are repositioned to the center of the original broken block and their velocity is zeroed, eliminating the vanilla random offset and upward kick that caused scatter.
@@ -49,7 +54,6 @@ This roadmap describes planned directions for Rory's Excavation. Nothing here is
 ## Planned
 
 ### vNext — Polish
-- Tool durability: `damagePerBlock=false` (default) deducts once per chain; `true` deducts once per block.
 - Block blacklist: config-driven list of block IDs to never excavate.
 
 ### Polish
