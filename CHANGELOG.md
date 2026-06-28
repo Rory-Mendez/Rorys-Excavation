@@ -7,6 +7,46 @@ Versioning: [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.8.0] — 2026-06-28
+
+### Added - v0.8.0
+
+- **In-game settings screen** (`GuiExcavationConfig`): press **F12** (default) while in-game with no GUI open to open the Rory's Excavation settings screen. All five config values are editable without touching the config file:
+  - **Enable Excavation** — toggle button.
+  - **Activation Key** — click to enter key-capture mode; press any key to bind; ESC cancels.
+  - **Max Blocks** — `<` and `>` buttons adjust in steps of 8, clamped 1–512.
+  - **Damage Mode** — toggles between *Per Chain* (one durability hit per excavation) and *Per Block* (one per extra block removed).
+  - **Open Config Key** — the F12 key itself is rebindable in the same screen using the same key-capture mechanism.
+- **`openConfigKey` config property** (default: 88 = F12): written to `rorys-excavation.cfg` on first launch. Changing it in the file or in-game both work. F12 was chosen over F7 to avoid conflicts with MAtmos and other legacy 1.2.5 mods.
+- **Immediate apply**: new values take effect as soon as the settings screen closes — no game restart required. `ExcavationHandler` reads `config.getActivationKeyCode()`, `config.getOpenConfigKey()`, etc. from the live `ModConfig` object every tick.
+- **Config file remains fully compatible**: the .cfg format is unchanged; manual editing still works.
+
+### How the GUI works - v0.8.0
+
+`GuiExcavationConfig extends vp` (GuiScreen). `ExcavationHandler.tickStart` detects the leading edge of the `openConfigKey` press (edge-detected via `prevOpenKeyDown`, fires once per press not once per tick) and calls `mc.a(new GuiExcavationConfig(config))` = `displayGuiScreen`. On close, `vp.j()` (onGuiClosed) calls `config.setXxx()` for each edited value then `config.save()`. `forge.Property.value` (a public String field) is updated by each setter; `forge.Configuration.save()` flushes the property map to disk.
+
+Key-capture mode: clicking an Activation Key or Open Config Key button sets `capturingForBtn`. The screen's `vp.a(CI)V` = `keyTyped` override intercepts the next non-ESC key press and records it as the new binding. ESC cancels without changing anything.
+
+### Confirmed new obfuscated mappings — v0.8.0
+
+See Core `docs/OBFUSCATION_MAP.md` for full entries. Summary:
+
+| Obfuscated | Deobfuscated | Notes |
+|---|---|---|
+| `vp` | `GuiScreen` | Extends `oo`. Fields: `p`=mc, `q`=width, `r`=height, `s`=buttonList (List, protected), `u`=fontRenderer (nl, protected). |
+| `abp` | `GuiButton` | Extends `oo`. Fields: `a`=id (int, protected), `e`=displayString (String), `h`=enabled (boolean). Constructor `(IIIIILjava/lang/String;)` = (id,x,y,width,height,text). |
+| `nl` | `FontRenderer` | `a(String,int,int,int)I` = drawString; `a(String)I` = getStringWidth. |
+| `mc.a(vp)V` | `displayGuiScreen(GuiScreen)` | Opens a screen; triggers `onGuiClosed()` on the old screen. |
+| `forge.Property.value` | Writable String field | Set directly to update a property value before `forge.Configuration.save()`. |
+
+### Not yet implemented - v0.8.0
+
+- Block blacklist / whitelist.
+- Controls menu integration (opening from Minecraft's Options/Controls screens).
+- Per-tool opt-in.
+
+---
+
 ## [0.7.0] — 2026-06-28
 
 ### Added - v0.7.0

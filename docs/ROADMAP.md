@@ -6,6 +6,13 @@ This roadmap describes planned directions for Rory's Excavation. Nothing here is
 
 ## Released
 
+### v0.8.0
+- In-game settings screen (`GuiExcavationConfig`): press F12 (default, rebindable) to open.
+- All five config values editable without touching the .cfg file: Enable Excavation, Activation Key, Max Blocks, Damage Mode, Open Config Key.
+- Key-capture rebinding for Activation Key and Open Config Key: click button → press key → bound.
+- Changes save to rorys-excavation.cfg on screen close and apply immediately (no restart).
+- New config property: `openConfigKey` (default 88 = F12).
+
 ### v0.7.0
 - Tool durability: `damagePerBlock=false` (default) deducts once per chain; `damagePerBlock=true` deducts once per extra block. Creative mode skipped. Empty hand safe. Native `damageItem` used — Unbreaking and modded tools work correctly.
 - 26-neighbor BFS: faces, edges, and corners are all searched. Diagonal ore veins are now found and fully excavated.
@@ -62,7 +69,7 @@ This roadmap describes planned directions for Rory's Excavation. Nothing here is
 - Per-tool opt-in: only excavate when holding a pickaxe / shovel / axe (configurable).
 
 ### Configuration Improvements
-- In-game config GUI (Forge mod options screen).
+- Controls/Options menu integration (open settings screen from vanilla menus).
 - Per-world config profiles.
 
 ### Compatibility

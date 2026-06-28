@@ -87,18 +87,46 @@ public class ExcavationHandler implements ITickHandler {
     private int prevBlockId;
     private int prevMeta;
 
+    /**
+     * Edge-detection state for the open-config key.
+     * true while the key was held last tick; used to fire on press, not hold.
+     */
+    private boolean prevOpenKeyDown = false;
+
     public ExcavationHandler(ModConfig config) {
         this.config = config;
     }
 
     @Override
     public void tickStart(EnumSet<TickType> type, Object... tickData) {
+        net.minecraft.client.Minecraft mc = FMLClientHandler.instance().getClient();
+        if (mc == null) {
+            clearPrev();
+            prevOpenKeyDown = false;
+            return;
+        }
+
+        // ── Open-config key gate ──────────────────────────────────────────────
+        // Fires on the leading edge (press, not hold) when the player is in-game
+        // with no other GUI open. Runs regardless of enableExcavation so the
+        // screen is always reachable. config.getOpenConfigKey() is read every tick
+        // so a newly saved binding takes effect immediately without restart.
+        //
+        // mc.s = currentScreen (vp / GuiScreen); null when no GUI is open.
+        // mc.h = thePlayer (vq); null in the main menu.
+        // mc.a(vp) = displayGuiScreen(GuiScreen) (confirmed by javap).
+        boolean openKeyDown = Keyboard.isKeyDown(config.getOpenConfigKey());
+        if (openKeyDown && !prevOpenKeyDown && mc.h != null && mc.s == null) {
+            mc.a(new GuiExcavationConfig(config));
+        }
+        prevOpenKeyDown = openKeyDown;
+
+        // ── Excavation tick ───────────────────────────────────────────────────
         if (!config.isExcavationEnabled()) {
             return;
         }
 
-        net.minecraft.client.Minecraft mc = FMLClientHandler.instance().getClient();
-        if (mc == null || mc.h == null || mc.f == null) {
+        if (mc.h == null || mc.f == null) {
             clearPrev();
             return;
         }

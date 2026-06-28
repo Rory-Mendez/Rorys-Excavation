@@ -207,6 +207,7 @@ mkdir build\classes
   -d %MOD_OUT% ^
   src\main\java\mod_RorysExcavation.java ^
   src\main\java\ExcavationHandler.java ^
+  src\main\java\GuiExcavationConfig.java ^
   src\main\java\com\rorysmod\excavation\config\ModConfig.java ^
   src\main\java\com\rorysmod\excavation\feature\ExcavationDetector.java
 ```
@@ -215,13 +216,13 @@ mkdir build\classes
 
 ```bat
 cd build\classes
-jar cf ..\..\rorys-excavation-0.7.0.jar .
+jar cf ..\..\rorys-excavation-0.8.0.jar .
 ```
 
 ### Step 3 — Verify
 
 ```bat
-jar -tf rorys-excavation-0.7.0.jar
+jar -tf rorys-excavation-0.8.0.jar
 ```
 
 Expected contents:
@@ -230,8 +231,13 @@ Expected contents:
 META-INF/MANIFEST.MF
 mod_RorysExcavation.class
 ExcavationHandler.class
+ExcavationHandler$1.class
+ExcavationHandler$2.class
+GuiExcavationConfig.class
 com/rorysmod/excavation/config/ModConfig.class
 com/rorysmod/excavation/feature/ExcavationDetector.class
+com/rorysmod/excavation/feature/ExcavationDetector$WorldReader.class
+com/rorysmod/excavation/feature/ExcavationDetector$WorldWriter.class
 ```
 
 ### Step 4 — Install
