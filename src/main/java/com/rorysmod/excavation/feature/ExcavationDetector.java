@@ -6,7 +6,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Queue;
 import java.util.Set;
-import java.util.logging.Logger;
 
 /**
  * Pure block-break detection, BFS traversal, and world-modification logic.
@@ -18,9 +17,6 @@ import java.util.logging.Logger;
  * obfuscated Minecraft runtime so this class can focus on logic only.
  */
 public final class ExcavationDetector {
-
-    private static final Logger LOG = Logger.getLogger("Minecraft");
-    private static final String PREFIX = "[RorysExcavation]";
 
     // All 26 neighbors of a block: faces (6) + edges (12) + corners (8).
     // Diagonal connectivity is required for ore veins that touch only at edges or corners.
@@ -62,20 +58,6 @@ public final class ExcavationDetector {
     public interface WorldWriter {
         /** Set the block at (x,y,z) to the given blockId (0 = air). */
         void setBlock(int x, int y, int z, int blockId);
-    }
-
-    // ─────────────────────────────────────────────────────────────────────────
-    // Detection
-    // ─────────────────────────────────────────────────────────────────────────
-
-    /**
-     * Called when a block disappears at the position the player was targeting.
-     */
-    public static void onBlockBroken(int blockId, int meta, int x, int y, int z) {
-        LOG.info(PREFIX + " Block broken:"
-                + " id=" + blockId
-                + " meta=" + meta
-                + " pos=(" + x + "," + y + "," + z + ")");
     }
 
     // ─────────────────────────────────────────────────────────────────────────

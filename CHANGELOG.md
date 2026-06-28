@@ -7,6 +7,32 @@ Versioning: [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [1.0.0] — 2026-06-28
+
+### Summary — v1.0.0
+
+First stable release. All core features are complete and tested. No new gameplay features were added in this release — this is a cleanup, documentation, and polish pass to bring the codebase to release quality.
+
+### Changed — v1.0.0
+
+- **Version bump**: `mod_RorysExcavation.VERSION` set to `"1.0.0"`. Jar renamed `rorys-excavation-1.0.0.jar`.
+- **Dead code removed**: `ExcavationDetector.onBlockBroken()`, `LOG`, and `PREFIX` fields deleted. The method was no longer called after v0.9.0; the two constants were its only dependents. The now-orphaned `java.util.logging.Logger` import was also removed.
+- **Stale comments cleaned**:
+  - `ExcavationHandler` class Javadoc updated to accurately describe the v0.9.0 tick logic (blacklist gate, debug-gated paths, count-only BFS only when `debugMessages=true`).
+  - Removed the stale `yw.ah()` inline comment from the durability setup block — that method is never called.
+  - Removed version-relative layout comment in `GuiExcavationConfig.rebuildButtons()`.
+- **`ARCHITECTURE.md` fully rewritten**: was referencing `ExcavationLogic` (class that does not exist), `com.rorysmod.excavation.handler` (package that does not exist), and a stale two-class diagram. Now accurately documents all five classes, their responsibilities, and the design decisions behind them.
+- **`INSTALL.md` fully rewritten**: was referencing `0.0.1.jar` and documented only 4 config properties. Now documents all 7 properties, the in-game settings screen, the default blacklist with rationale, key code reference tables, and updated jar name.
+- **`BUILD.md`**: jar name updated to `1.0.0`.
+- **`README.md`**: version updated to `1.0.0`.
+- **`ROADMAP.md`**: v1.0.0 added to released section.
+
+### No behavior changes — v1.0.0
+
+All excavation behavior, config handling, blacklist enforcement, debug-message gating, GUI controls, and drop clustering are identical to v0.9.0.
+
+---
+
 ## [0.9.0] — 2026-06-28
 
 ### Added — v0.9.0
@@ -16,7 +42,7 @@ Versioning: [Semantic Versioning](https://semver.org/).
 - **Default blacklist** — `7,52,54,61,62,63,64,68,71`:
 
   | ID | Block | Reason |
-  |---|---|---|
+  | --- | --- | --- |
   | 7 | Bedrock | Indestructible; excavating it does nothing but wastes cycles |
   | 52 | Mob Spawner | Removing spawners silently is almost always unintentional |
   | 54 | Chest | Auto-destroying a Chest would lose its inventory contents |
@@ -66,7 +92,7 @@ Key-capture mode: clicking an Activation Key or Open Config Key button sets `cap
 See Core `docs/OBFUSCATION_MAP.md` for full entries. Summary:
 
 | Obfuscated | Deobfuscated | Notes |
-|---|---|---|
+| --- | --- | --- |
 | `vp` | `GuiScreen` | Extends `oo`. Fields: `p`=mc, `q`=width, `r`=height, `s`=buttonList (List, protected), `u`=fontRenderer (nl, protected). |
 | `abp` | `GuiButton` | Extends `oo`. Fields: `a`=id (int, protected), `e`=displayString (String), `h`=enabled (boolean). Constructor `(IIIIILjava/lang/String;)` = (id,x,y,width,height,text). |
 | `nl` | `FontRenderer` | `a(String,int,int,int)I` = drawString; `a(String)I` = getStringWidth. |

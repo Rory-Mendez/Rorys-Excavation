@@ -19,10 +19,15 @@ import java.util.List;
  * Polls {@code Minecraft.objectMouseOver} (runtime field: {@code mc.z}, type {@code pl})
  * each tick. When a tracked block transitions to air:
  * <ol>
- *   <li>Always: runs BFS to count connected matching blocks and reports the count.</li>
- *   <li>Only when the configured activation key is held: collects all connected matching
- *       blocks (up to maxBlocks), spawns their drops clustered at the original broken
- *       position, and removes each via {@code World.setBlockWithNotify}.</li>
+ *   <li>Skips the block entirely if its ID is in the blacklist (config: {@code blacklist}).</li>
+ *   <li>If {@code debugMessages=true}: emits a chat message with the broken block's ID,
+ *       metadata, and position.</li>
+ *   <li>If the activation key is held: runs BFS to collect connected matching blocks
+ *       (up to {@code maxBlocks}), spawns their drops clustered at the original broken
+ *       position, removes each via {@code World.setBlockWithNotify}, and applies tool
+ *       durability. If {@code debugMessages=true} also prints the excavation count.</li>
+ *   <li>If the activation key is not held and {@code debugMessages=true}: runs a
+ *       count-only BFS and prints the number of connected matching blocks.</li>
  * </ol>
  *
  * <h3>Obfuscated runtime names used (Minecraft 1.2.5 / Forge 3.4.9.171):</h3>
@@ -228,21 +233,14 @@ public class ExcavationHandler implements ITickHandler {
                         double cz = prevZ + 0.5;
 
                         // ── Tool durability setup ─────────────────────────────────────
-                        // yw.av()    = getCurrentEquippedItem(); delegates to aak.b() = ap.a[ap.c]
-                        // yw.ah()    = getItemInUse(); returns yw.d — null unless player is eating/drinking
-                        // aak.c      = currentItem (selected hotbar slot 0-8)
-                        // yw.aT      = PlayerCapabilities (qu; public)
-                        // qu.c       = isCreativeMode (confirmed: addExhaustion skips when true)
-                        // aan.b()    = getMaxDamage(ItemStack); calls virtual yr.g(aan) — overridden by tools
-                        // aan.a(I,acq) = damageItem(amount, EntityLivingBase)
-                        //               handles Unbreaking (random skip) and tool breaking.
-                        //               Does NOT check creative mode — must be guarded here.
-                        // aan.a      = stackSize (public int); guard > 0 to avoid repeated break FX
-                        //               if the tool already broke on a previous iteration.
+                        // yw.av()      = getCurrentEquippedItem(); delegates to aak.b() = ap.a[ap.c]
+                        // yw.aT        = PlayerCapabilities (qu; public)
+                        // qu.c         = isCreativeMode; damageItem does NOT check this — must guard here
+                        // aan.b()      = getMaxDamage(); calls virtual yr.g(aan) — overridden by tools
+                        // aan.a(I,acq) = damageItem(amount, EntityLivingBase); handles Unbreaking + break
+                        // aan.a        = stackSize; guard > 0 to avoid repeated break FX if tool is gone
                         boolean damagePerBlock = config.isDamagePerBlock();
                         boolean creative       = mc.h.aT.c;
-                        // yw.av() = getCurrentEquippedItem via inventory: ap.a[ap.c]
-                        // yw.ah() returns yw.d (itemInUse) which is null unless right-clicking to eat/drink.
                         aan firstTool          = mc.h.av();
 
                         // aan.b() calls virtual yr.g(aan) — overridden by tool subclasses to return max

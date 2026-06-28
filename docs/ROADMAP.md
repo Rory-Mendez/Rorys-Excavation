@@ -6,6 +6,13 @@ This roadmap describes planned directions for Rory's Excavation. Nothing here is
 
 ## Released
 
+### v1.0.0
+- **Stable release**. No new gameplay features.
+- Dead code removed: `ExcavationDetector.onBlockBroken()`, `LOG`, `PREFIX`.
+- Stale comments cleaned in `ExcavationHandler`, `GuiExcavationConfig`.
+- `ARCHITECTURE.md` fully rewritten to match the actual codebase.
+- `INSTALL.md` fully rewritten: all 7 config properties documented, jar name corrected, blacklist table added, key code reference tables added.
+
 ### v0.9.0
 - **No debug spam in normal play**: excavation chat messages are suppressed by default.
 - **`debugMessages` config option** (default: `false`): restore debug chat output when needed. Toggleable in the settings screen without restart.
@@ -64,23 +71,54 @@ This roadmap describes planned directions for Rory's Excavation. Nothing here is
 
 ---
 
-## Planned
+## Post v1.0.0 Ideas
 
-### vNext — Polish
-- In-game blacklist editing (GUI): currently the blacklist is file-only; a future version may allow editing it from the settings screen.
-- In-game feedback: particle or sound cue when excavation triggers.
-- Per-tool opt-in: only excavate when holding a pickaxe / shovel / axe (configurable).
+None of the items below are planned, scheduled, or promised. They are possible directions that may or may not be explored in future versions, evaluated on whether they fit the project's design philosophy and the constraints of Minecraft 1.2.5 / Forge 3.4.9.171.
 
-### Configuration Improvements
-- Controls/Options menu integration (open settings screen from vanilla menus).
-- Per-world config profiles.
+### Configuration
+
+- **Controls menu integration**: investigate whether the settings screen can be opened from Minecraft's built-in Controls menu, so players can discover and reach it without knowing the hotkey.
+- **Options menu integration**: evaluate whether a shortcut or entry in the vanilla Options menu is worthwhile, or whether the F12 hotkey is sufficient.
+- Regardless of how the screen is opened, the configurable hotkey (`openConfigKey`) should remain fully functional.
+
+### Configuration GUI
+
+- **In-game blacklist editing**: the blacklist is currently file-only. A future version may allow viewing and editing it directly from the settings screen.
+- **Whitelist support**: consider whether an opt-in whitelist (only excavate listed block IDs) would complement the blacklist, or whether it would be redundant.
+- Any block list changes must remain compatible with the existing `.cfg` file format — manual editing should always work.
+- If block list editing is added to the GUI, consider a search or filter for block IDs to keep the interface usable as the list grows.
+
+### Quality of Life
+
+- **Configuration profiles**: named presets (e.g. Mining, Building, Custom) that let the player switch between different `maxBlocks`, activation key, and damage settings without manually editing values each time.
+- **Import / Export presets**: share or back up configuration as a simple text snippet or file.
+- **In-game feedback**: a subtle particle or sound cue when excavation triggers, so the player can tell it fired without relying on debug messages.
+- **Per-tool opt-in**: optionally restrict excavation to pickaxes, shovels, or axes only; bare-handed or off-tool breaking would behave normally.
 
 ### Compatibility
-- Test and document compatibility with common 1.2.5 mods (OptiFine, Too Many Items, etc.).
-- Graceful degradation when conflicting mods are detected.
 
-### Rory's Ecosystem Integration
-Future integration with other mods in the Rory's Mods ecosystem.
+- Continue testing with larger Minecraft 1.2.5 modpacks and common mods (OptiFine, Too Many Items, etc.).
+- Investigate and document any conflicts that arise; improve compatibility where it is feasible within the 1.2.5 / Forge 3.4.9.171 constraints.
+- Graceful degradation when conflicting mods are detected is preferred over hard failures.
+
+### Rory's Mods Ecosystem Integration
+
+- Future integration with other mods in the Rory's Mods ecosystem where it makes sense.
+- Shared configuration conventions and obfuscation map maintenance via Rorys-Mod-Core.
+
+---
+
+## Design Philosophy
+
+Rory's Excavation is intentionally narrow in scope. Future work should be evaluated against these principles before being added:
+
+- **Lightweight**: no background threads, no large data structures, minimal per-tick work.
+- **Predictable**: the player should always be able to anticipate what will and will not be excavated.
+- **Configurable**: sensible defaults for new players, enough options for experienced ones.
+- **Close to vanilla**: drops, durability, and sounds follow vanilla behaviour wherever possible.
+- **Focused**: connected-block excavation is the one thing this mod does. Features that belong in a different mod should live in a different mod.
+
+Feature creep is the primary risk to this project's long-term usability. When in doubt, the answer is no.
 
 ---
 

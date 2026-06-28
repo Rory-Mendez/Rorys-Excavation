@@ -2,7 +2,7 @@
 
 A lightweight Minecraft 1.2.5 quality-of-life mod inspired by FTB Ultimine / VeinMiner behavior.
 
-**Latest version:** v0.9.0  
+**Latest version:** v1.0.0  
 **Target:** Minecraft 1.2.5 · Forge 3.4.9.171 · FML 2.2.106.176
 
 ---
@@ -37,7 +37,7 @@ Press **F12** (default, rebindable) to open the in-game settings screen and chan
 
 See [docs/INSTALL.md](docs/INSTALL.md) for full instructions.
 
-Short version: drop `rorys-excavation-0.9.0.jar` into your `mods/` folder and launch.
+Short version: drop `rorys-excavation-1.0.0.jar` into your `mods/` folder and launch.
 
 ---
 
@@ -45,7 +45,7 @@ Short version: drop `rorys-excavation-0.9.0.jar` into your `mods/` folder and la
 
 On first launch a config file is created at:
 
-```
+```e
 .minecraft/config/rorys-excavation.cfg
 ```
 

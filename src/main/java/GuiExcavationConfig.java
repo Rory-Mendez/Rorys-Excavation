@@ -110,7 +110,7 @@ public class GuiExcavationConfig extends vp {
     private void rebuildButtons() {
         this.s.clear();
         int cx = this.q / 2;
-        int y  = this.r / 2 - 92;   // start 12px higher than v0.8.0 to fit the extra row
+        int y  = this.r / 2 - 92;   // centred for 6 data rows at 24px spacing
 
         // Row 0 — Enable Excavation toggle
         this.s.add(new abp(BTN_ENABLE, cx - 100, y, 200, 20,
