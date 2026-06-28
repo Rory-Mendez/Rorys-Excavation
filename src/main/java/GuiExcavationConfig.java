@@ -7,15 +7,30 @@ import com.rorysmod.excavation.config.ModConfig;
 /**
  * In-game settings screen for Rory's Excavation.
  *
- * Extends {@code vp} (GuiScreen). All five configurable values are shown as
+ * Extends {@code vp} (GuiScreen). Six configurable values are shown as
  * interactive controls. Changes are held in local edit fields and committed to
  * {@link ModConfig} (and flushed to rorys-excavation.cfg) only when the screen
  * is closed — either by pressing Done, pressing ESC, or any other dismissal.
  * The new values take effect on the very next game tick with no restart.
  *
+ * <p>The blacklist is NOT editable here; it is file-only.</p>
+ *
  * <h3>Opening</h3>
  * Triggered by {@code ExcavationHandler} when {@code openConfigKey} (default F12,
  * LWJGL code 88) is pressed while in-game with no GUI open.
+ *
+ * <h3>Layout (6 data rows + Done, centred vertically)</h3>
+ * <pre>
+ *   r/2 - 108   Title
+ *   r/2 -  92   Enable Excavation
+ *   r/2 -  68   Activation Key
+ *   r/2 -  44   Max Blocks  < [label] >
+ *   r/2 -  20   Damage Mode
+ *   r/2 +   4   Debug Messages
+ *   r/2 +  28   Open Config Key
+ *   r/2 +  64   Done  (extra 12px gap)
+ *   r/2 +  92   Key-capture hint (when active)
+ * </pre>
  *
  * <h3>Obfuscated runtime mappings used (confirmed by javap on minecraft-1.2.5-client.jar)</h3>
  * <pre>
@@ -34,11 +49,11 @@ import com.rorysmod.excavation.config.ModConfig;
  *   vp.b() : boolean                       = doesGuiPauseGame
  *   abp                                    = GuiButton  (extends oo)
  *   abp(int, int, int, int, int, String)   = GuiButton(id, x, y, width, height, text)
- *   abp.f  : int                            = id  (confirmed: 6-arg constructor stores p1 → f)
- *   abp.a  : int                            = width  (confirmed: constructor stores p4 → a)
+ *   abp.f  : int                            = id  (confirmed: 6-arg constructor stores p1 -> f)
+ *   abp.a  : int                            = width  (confirmed: constructor stores p4 -> a, NOT id)
  *   abp.e  : String                         = displayString  (public)
  *   abp.h  : boolean                        = enabled  (public)
- *   nl.a(String, int, int, int) : int      = drawString(text, x, y, color) → end-x
+ *   nl.a(String, int, int, int) : int      = drawString(text, x, y, color) -> end-x
  *   nl.a(String) : int                     = getStringWidth(text)
  *   net.minecraft.client.Minecraft.a(vp) : void = displayGuiScreen(GuiScreen)
  *   net.minecraft.client.Minecraft.s : vp  = currentScreen  (public)
@@ -52,8 +67,9 @@ public class GuiExcavationConfig extends vp {
     private static final int BTN_BLK_DEC  = 2;
     private static final int BTN_BLK_INC  = 3;
     private static final int BTN_DAMAGE   = 4;
-    private static final int BTN_OPENKEY  = 5;
-    private static final int BTN_DONE     = 6;
+    private static final int BTN_DEBUG    = 5;
+    private static final int BTN_OPENKEY  = 6;
+    private static final int BTN_DONE     = 7;
 
     private final ModConfig config;
 
@@ -62,11 +78,12 @@ public class GuiExcavationConfig extends vp {
     private int     editActKey;
     private int     editMaxBlocks;
     private boolean editDamage;
+    private boolean editDebug;
     private int     editOpenKey;
 
     /**
      * Which button is currently in key-capture mode, or -1 if none.
-     * When ≥ 0, the next key press (excluding ESC) is recorded as the new binding.
+     * When >= 0, the next key press (excluding ESC) is recorded as the new binding.
      */
     private int capturingForBtn = -1;
 
@@ -76,6 +93,7 @@ public class GuiExcavationConfig extends vp {
         this.editActKey    = config.getActivationKeyCode();
         this.editMaxBlocks = config.getMaxBlocks();
         this.editDamage    = config.isDamagePerBlock();
+        this.editDebug     = config.isDebugMessages();
         this.editOpenKey   = config.getOpenConfigKey();
     }
 
@@ -92,7 +110,7 @@ public class GuiExcavationConfig extends vp {
     private void rebuildButtons() {
         this.s.clear();
         int cx = this.q / 2;
-        int y  = this.r / 2 - 80;
+        int y  = this.r / 2 - 92;   // start 12px higher than v0.8.0 to fit the extra row
 
         // Row 0 — Enable Excavation toggle
         this.s.add(new abp(BTN_ENABLE, cx - 100, y, 200, 20,
@@ -115,14 +133,19 @@ public class GuiExcavationConfig extends vp {
         String dmgLabel = "Damage Mode: " + (editDamage ? "Per Block" : "Per Chain");
         this.s.add(new abp(BTN_DAMAGE, cx - 100, y, 200, 20, dmgLabel));
 
-        // Row 4 — Open Config Key capture
+        // Row 4 — Debug Messages toggle
+        y += 24;
+        String dbgLabel = "Debug Messages: " + editDebug;
+        this.s.add(new abp(BTN_DEBUG, cx - 100, y, 200, 20, dbgLabel));
+
+        // Row 5 — Open Config Key capture
         y += 24;
         String openKeyLabel = (capturingForBtn == BTN_OPENKEY)
                 ? "> Press a key <"
                 : "Open Config Key: " + keyName(editOpenKey);
         this.s.add(new abp(BTN_OPENKEY, cx - 100, y, 200, 20, openKeyLabel));
 
-        // Row 5 (gap + 12) — Done
+        // Row 6 (extra 12px gap) — Done
         y += 36;
         this.s.add(new abp(BTN_DONE, cx - 100, y, 200, 20, "Done"));
     }
@@ -146,11 +169,14 @@ public class GuiExcavationConfig extends vp {
             case BTN_DAMAGE:
                 editDamage = !editDamage;
                 break;
+            case BTN_DEBUG:
+                editDebug = !editDebug;
+                break;
             case BTN_OPENKEY:
                 capturingForBtn = BTN_OPENKEY;
                 break;
             case BTN_DONE:
-                // displayGuiScreen(null) → triggers onGuiClosed() → save
+                // displayGuiScreen(null) -> triggers onGuiClosed() -> save
                 this.p.a((vp) null);
                 return;
         }
@@ -194,6 +220,7 @@ public class GuiExcavationConfig extends vp {
         config.setActivationKeyCode(editActKey);
         config.setMaxBlocks(editMaxBlocks);
         config.setDamagePerBlock(editDamage);
+        config.setDebugMessages(editDebug);
         config.setOpenConfigKey(editOpenKey);
         config.save();
     }
@@ -210,20 +237,20 @@ public class GuiExcavationConfig extends vp {
         String title = "Rory's Excavation Settings";
         // nl.a(String)I = getStringWidth (confirmed by javap)
         int titleX = cx - this.u.a(title) / 2;
-        // nl.a(String,int,int,int)I = drawString(text,x,y,color) → end-x (confirmed)
+        // nl.a(String,int,int,int)I = drawString(text,x,y,color) -> end-x (confirmed)
         this.u.a(title, titleX, this.r / 2 - 108, 0xFFFFFF);
 
         // Max Blocks label — centred in the gap between < (ends cx-60) and > (starts cx+60)
-        // "Max Blocks: " + value, drawn vertically centred in the button row
+        // Row 2 is at r/2 - 44; draw label 6px below the button top for vertical centering.
         String maxLabel = "Max Blocks: " + editMaxBlocks;
         int maxLabelX = cx - this.u.a(maxLabel) / 2;
-        this.u.a(maxLabel, maxLabelX, this.r / 2 - 26, 0xE0E0E0);
+        this.u.a(maxLabel, maxLabelX, this.r / 2 - 38, 0xE0E0E0);
 
-        // Key-capture hint
+        // Key-capture hint — shown below Done when a key-capture is active
         if (capturingForBtn >= 0) {
             String hint = "Press any key to bind  |  ESC to cancel";
             int hintX = cx - this.u.a(hint) / 2;
-            this.u.a(hint, hintX, this.r / 2 + 80, 0xFFFF55);
+            this.u.a(hint, hintX, this.r / 2 + 92, 0xFFFF55);
         }
 
         // Draw all buttons (iterates this.s, calls abp.a(mc,mouseX,mouseY))

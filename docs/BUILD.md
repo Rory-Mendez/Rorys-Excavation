@@ -216,13 +216,13 @@ mkdir build\classes
 
 ```bat
 cd build\classes
-jar cf ..\..\rorys-excavation-0.8.0.jar .
+jar cf ..\..\rorys-excavation-0.9.0.jar .
 ```
 
 ### Step 3 — Verify
 
 ```bat
-jar -tf rorys-excavation-0.8.0.jar
+jar -tf rorys-excavation-0.9.0.jar
 ```
 
 Expected contents:
@@ -255,6 +255,6 @@ Drop `rorys-excavation-0.0.1.jar` into the Prism Launcher instance `mods/` folde
 | Tick registration | `FMLCommonHandler.instance().registerTickHandler(ITickHandler)` — no `Side` parameter |
 | Tick types available | `GAME`, `RENDER`, `GUI`, `WORLDGUI`, `GUILOAD`, `WORLD` — `PLAYER` does NOT exist |
 | Config class | `forge.Configuration` (NOT `net.minecraftforge.common.Configuration`) |
-| Config API | `getOrCreateBooleanProperty(name, category, default)` / `getOrCreateIntProperty(name, category, default)` / `getOrCreateStringProperty(name, category, default)` |
+| Config API | `getOrCreateBooleanProperty(name, category, default)` / `getOrCreateIntProperty(name, category, default)` / `getOrCreateProperty(name, category, default)` (string variant — `getOrCreateStringProperty` does NOT exist in this version) |
 | Key detection | `Keyboard.isKeyDown(keyCode)` from LWJGL — no FML key-bind registration API for this version |
 | Minecraft instance | `FMLClientHandler.instance().getClient()` returns `net.minecraft.client.Minecraft` |

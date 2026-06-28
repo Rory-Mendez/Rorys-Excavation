@@ -6,6 +6,12 @@ This roadmap describes planned directions for Rory's Excavation. Nothing here is
 
 ## Released
 
+### v0.9.0
+- **No debug spam in normal play**: excavation chat messages are suppressed by default.
+- **`debugMessages` config option** (default: `false`): restore debug chat output when needed. Toggleable in the settings screen without restart.
+- **Block blacklist** (`blacklist` in config): comma-separated block ID list. Blacklisted blocks are never excavated automatically; manual breaking is unaffected. File-only; not editable in-game.
+- **Default blacklist**: Bedrock (7), Mob Spawner (52), Chest (54), Furnace (61), Burning Furnace (62), Sign Post (63), Wooden Door (64), Wall Sign (68), Iron Door (71).
+
 ### v0.8.0
 - In-game settings screen (`GuiExcavationConfig`): press F12 (default, rebindable) to open.
 - All five config values editable without touching the .cfg file: Enable Excavation, Activation Key, Max Blocks, Damage Mode, Open Config Key.
@@ -61,11 +67,8 @@ This roadmap describes planned directions for Rory's Excavation. Nothing here is
 ## Planned
 
 ### vNext — Polish
-- Block blacklist: config-driven list of block IDs to never excavate.
-
-### Polish
+- In-game blacklist editing (GUI): currently the blacklist is file-only; a future version may allow editing it from the settings screen.
 - In-game feedback: particle or sound cue when excavation triggers.
-- Better blacklist: config-driven list of block IDs to never excavate.
 - Per-tool opt-in: only excavate when holding a pickaxe / shovel / axe (configurable).
 
 ### Configuration Improvements

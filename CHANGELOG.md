@@ -7,6 +7,40 @@ Versioning: [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.9.0] — 2026-06-28
+
+### Added — v0.9.0
+
+- **`debugMessages` config option** (default: `false`): when `true`, excavation events are printed to in-game chat — block-break detection, connected-block count, and excavation total. When `false` (the default for all new installs), no excavation text appears in chat during normal gameplay. Toggleable in-game from the settings screen; takes effect immediately without restart.
+- **Block blacklist** (`blacklist` config property): comma-separated list of block IDs that are never excavated automatically. Manual breaking always works normally. Invalid or out-of-range entries are silently ignored. Not editable in-game; change it in `rorys-excavation.cfg`.
+- **Default blacklist** — `7,52,54,61,62,63,64,68,71`:
+
+  | ID | Block | Reason |
+  |---|---|---|
+  | 7 | Bedrock | Indestructible; excavating it does nothing but wastes cycles |
+  | 52 | Mob Spawner | Removing spawners silently is almost always unintentional |
+  | 54 | Chest | Auto-destroying a Chest would lose its inventory contents |
+  | 61 | Furnace | Same inventory risk as Chest |
+  | 62 | Burning Furnace | Same risk; active state implies contents are present |
+  | 63 | Sign Post | Signs carry text data; silent removal is surprising |
+  | 64 | Wooden Door | Doors are structural half-block entities |
+  | 68 | Wall Sign | Same as Sign Post |
+  | 71 | Iron Door | Same as Wooden Door |
+
+- **Debug Messages toggle in GUI** (`GuiExcavationConfig`): settings screen now shows a "Debug Messages: true/false" toggle between Damage Mode and Open Config Key. All other GUI controls are unchanged.
+
+### Changed — v0.9.0
+
+- **Removed gameplay debug spam**: the three chat messages that appeared during normal play ("Block broken…", "Found X connected blocks…", "Excavated X extra blocks…") no longer appear unless `debugMessages=true`. Existing installations will get `debugMessages=false` added to their config file on the next launch.
+- Count-only BFS (activation key not held) now only runs when `debugMessages=true`. When debug messages are off there is nothing to do on the count-only path, so the BFS is skipped entirely.
+- `ExcavationDetector.onBlockBroken` console log no longer called from the tick handler (it was redundant; the data is captured by the debug chat path when `debugMessages=true`).
+
+### Confirmed new API — v0.9.0
+
+- `forge.Configuration.getOrCreateProperty(String, String, String)` — the string-value variant of the Forge 3.4.9.171 config API. (`getOrCreateStringProperty` does NOT exist in this Forge version.)
+
+---
+
 ## [0.8.0] — 2026-06-28
 
 ### Added - v0.8.0

@@ -5,6 +5,9 @@ import forge.Property;
 import org.lwjgl.input.Keyboard;
 
 import java.io.File;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Set;
 
 /**
  * Loads, exposes, and persists all mod configuration values.
@@ -18,12 +21,13 @@ import java.io.File;
  *
  * forge.Property fields confirmed by javap of forge-1.2.5-3.4.9.171-client.jar:
  *   public String name;
- *   public String value;   ← writable; updated by setters before save()
+ *   public String value;   <- writable; updated by setters before save()
  *   public String comment;
  * forge.Configuration methods:
- *   getOrCreateBooleanProperty(String name, String category, boolean default) → Property
- *   getOrCreateIntProperty(String name, String category, int default) → Property
- *   save() → writes current property values to disk
+ *   getOrCreateBooleanProperty(String name, String category, boolean default) -> Property
+ *   getOrCreateIntProperty(String name, String category, int default)         -> Property
+ *   getOrCreateProperty(String name, String category, String default)         -> Property  (string variant)
+ *   save() -> writes current property values to disk
  */
 public class ModConfig {
 
@@ -33,6 +37,22 @@ public class ModConfig {
     /** LWJGL key code for F12 (default open-config key). */
     public static final int DEFAULT_OPEN_CONFIG_KEY = Keyboard.KEY_F12;
 
+    /**
+     * Default blacklist — block IDs that are never excavated automatically.
+     *
+     *   7   Bedrock          — indestructible; excavating it does nothing but wastes cycles
+     *  52   Mob Spawner      — removing spawners silently is almost always unintentional
+     *  54   Chest            — auto-destroying chests would lose inventory contents
+     *  61   Furnace          — same risk as Chest (items inside)
+     *  62   Burning Furnace  — same risk; active state means contents are present
+     *  63   Sign (post)      — signs carry text data; silent removal is surprising
+     *  64   Wooden Door      — doors are structural / half-block entities
+     *  68   Wall Sign        — same as Sign post
+     *  71   Iron Door        — same as Wooden Door
+     */
+    public static final String DEFAULT_BLACKLIST =
+            "7,52,54,61,62,63,64,68,71";
+
     private final Configuration forge;
 
     // ── Cached in-memory values ───────────────────────────────────────────────
@@ -41,6 +61,8 @@ public class ModConfig {
     private int     maxBlocks;
     private boolean damagePerBlock;
     private int     openConfigKey;
+    private boolean debugMessages;
+    private Set<Integer> blacklistSet;
 
     // ── Property refs — needed to update values before save() ────────────────
     private Property enableProp;
@@ -48,6 +70,8 @@ public class ModConfig {
     private Property maxProp;
     private Property durProp;
     private Property openKeyProp;
+    private Property debugProp;
+    private Property blacklistProp;
 
     public ModConfig(File file) {
         this.forge = new Configuration(file);
@@ -108,6 +132,34 @@ public class ModConfig {
                 + "Rebindable in-game from the settings screen itself.";
         openConfigKey   = openKeyProp.getInt(DEFAULT_OPEN_CONFIG_KEY);
 
+        debugProp = forge.getOrCreateBooleanProperty(
+                "debugMessages",
+                Configuration.CATEGORY_GENERAL,
+                false
+        );
+        debugProp.comment = "If true, excavation debug messages are printed to in-game chat: "
+                + "block-break detection, connected-block count, and excavation totals. "
+                + "Disabled by default — enable only for troubleshooting. "
+                + "Toggleable in-game via the Rory's Excavation settings screen.";
+        debugMessages = debugProp.getBoolean(false);
+
+        // getOrCreateProperty(name, category, default) is the string variant of the config API.
+        // Confirmed: forge.Configuration only exposes getOrCreateProperty for string values
+        // (getOrCreateStringProperty does not exist in Forge 3.4.9.171).
+        blacklistProp = forge.getOrCreateProperty(
+                "blacklist",
+                Configuration.CATEGORY_GENERAL,
+                DEFAULT_BLACKLIST
+        );
+        blacklistProp.comment = "Comma-separated list of block IDs that will never be excavated "
+                + "automatically. Manual breaking always works normally. "
+                + "Invalid or out-of-range values are silently ignored. "
+                + "Edit this file to change the blacklist — it is not editable in-game. "
+                + "Default: 7 (Bedrock), 52 (Mob Spawner), 54 (Chest), "
+                + "61 (Furnace), 62 (Burning Furnace), 63 (Sign Post), "
+                + "64 (Wooden Door), 68 (Wall Sign), 71 (Iron Door).";
+        blacklistSet = parseBlacklist(blacklistProp.value);
+
         forge.save();
     }
 
@@ -118,11 +170,16 @@ public class ModConfig {
     public int     getMaxBlocks()         { return maxBlocks; }
     public boolean isDamagePerBlock()     { return damagePerBlock; }
     public int     getOpenConfigKey()     { return openConfigKey; }
+    public boolean isDebugMessages()      { return debugMessages; }
+
+    /**
+     * Returns the set of block IDs that are excluded from automatic excavation.
+     * The set is unmodifiable; it is rebuilt from the config file on load.
+     */
+    public Set<Integer> getBlacklist()    { return blacklistSet; }
 
     // ── Setters — update in-memory value AND Property.value so save() persists ─
     // forge.Property.value is a public String field (confirmed by javap).
-    // Setting it here and calling save() is the correct way to write new values
-    // without re-constructing the Configuration object.
 
     public void setExcavationEnabled(boolean v) {
         excavationEnabled = v;
@@ -149,10 +206,39 @@ public class ModConfig {
         openKeyProp.value  = Integer.toString(v);
     }
 
+    public void setDebugMessages(boolean v) {
+        debugMessages    = v;
+        debugProp.value  = Boolean.toString(v);
+    }
+
     // ── Persist to disk ───────────────────────────────────────────────────────
 
     /** Writes current property values to rorys-excavation.cfg. */
     public void save() {
         forge.save();
+    }
+
+    // ── Helpers ───────────────────────────────────────────────────────────────
+
+    /**
+     * Parses a comma-separated string of block IDs into a Set<Integer>.
+     * Non-numeric tokens and IDs <= 0 are silently skipped.
+     */
+    private static Set<Integer> parseBlacklist(String csv) {
+        Set<Integer> set = new HashSet<Integer>();
+        if (csv == null || csv.trim().isEmpty()) {
+            return Collections.unmodifiableSet(set);
+        }
+        for (String token : csv.split(",")) {
+            try {
+                int id = Integer.parseInt(token.trim());
+                if (id > 0) {
+                    set.add(id);
+                }
+            } catch (NumberFormatException e) {
+                // skip invalid token
+            }
+        }
+        return Collections.unmodifiableSet(set);
     }
 }
